@@ -1,0 +1,9 @@
+# train: D:/defect_checker_code/yolo_dataset/images/train
+# val: D:/defect_checker_code/yolo_dataset/images/val
+# train: D:/defect_checker_code/yolo_dataset/2000_images/train
+# val: D:/defect_checker_code/yolo_dataset/2000_images/val
+train: ../dataset/yolo_dataset/images/train
+val: ../dataset/yolo_dataset/images/val
+
+nc: 1
+names: ['arrow_defect']
