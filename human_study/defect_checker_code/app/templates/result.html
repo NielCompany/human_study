@@ -1,0 +1,48 @@
+{% extends "layout/layout.html" %}
+
+{% block title_block %}
+  <title>AI 하자 점검 - 예측 결과</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/result.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="result-wrapper">
+
+  <!-- 결과 박스 -->
+  <div class="result-card">
+    <!-- 좌측: 이미지 -->
+    <div class="result-image">
+      <img src="{{ url_for('static', filename='uploads/' + image_name) }}"
+           alt="Uploaded Image"
+           class="uploaded-img" />
+    </div>
+
+    <!-- 우측: 예측 결과 -->
+    <div class="result-info">
+      <h2>예측 결과</h2>
+      <p><strong>파일 이름:</strong> {{ image_name }}</p>
+      <p><strong>예측 클래스:</strong> <span id="pred">{{ predicted_class }}</span></p>
+
+      <!-- 📋 복사 버튼 -->
+      <button class="copy-btn" onclick="copyText()">📋 복사하기</button>
+    </div>
+  </div>
+
+  <!-- ✅ 네모 박스 바깥쪽으로 버튼 배치 -->
+  <div class="back-wrapper">
+    <a href="{{ url_for('predict') }}">
+      <button class="back-button">← 다시 업로드하기</button>
+    </a>
+  </div>
+
+</main>
+
+<script>
+  function copyText() {
+    const text = document.getElementById('pred').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      alert('예측 결과가 복사되었습니다: ' + text);
+    });
+  }
+</script>
+{% endblock %}

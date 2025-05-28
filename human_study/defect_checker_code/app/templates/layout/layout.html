@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  {% block title_block %}<title>AI 하자 점검</title>{% endblock %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="wrapper">
+    {% include 'layout/header.html' %}
+    {% block content %}{% endblock %}
+  </div>
+  {% include 'layout/footer.html' %}
+</body>
+</html>
