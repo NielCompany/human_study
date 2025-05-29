@@ -47,10 +47,14 @@
 
 <script>
   function copyGeminiText() {
-    const text = document.querySelector('.gemini-text').innerText;
-    navigator.clipboard.writeText(text).then(() => {
-      alert('내용이 복사되었습니다');
+    const category = document.getElementById('pred').innerText; // 대분류 텍스트
+    const description = document.querySelector('.gemini-text').innerText; // 하자 설명
+    const fullText = `대분류: ${category}\n\n${description}`; // 원하는 포맷
+
+    navigator.clipboard.writeText(fullText).then(() => {
+      alert('예측 결과가 복사되었습니다!');
     });
   }
 </script>
+
 {% endblock %}
