@@ -83,7 +83,7 @@ def predict():
                                    image_name=filename,
                                    predicted_class=predicted_class,
                                    gemini_description=gemini_description)
-    return render_template('img_upload2.html')
+    return render_template('img_upload.html')
 # ---------------------------------------------------------
 
 
