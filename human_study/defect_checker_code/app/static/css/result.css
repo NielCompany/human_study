@@ -1,10 +1,21 @@
-.result-wrapper {
+
+
+/* .result-wrapper {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 3rem 1rem;
     background-color: #f9f9f9;
     height: auto;
+  } */
+
+  .result-wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;  /* 수직 가운데 정렬 */
+    align-items: center;      /* 수평 가운데 정렬 */
+    background-color: #f9f9f9;
+    min-height: 70vh;        /* 전체 화면 높이 기준 */
+    padding: 2rem 1rem;
   }
   
   /* ✅ 카드 박스 크기 늘림 */
@@ -71,6 +82,24 @@
     background-color: #45a049;
   }
   
+
+  .icon-copy-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: #4CAF50;
+    padding: 0.3rem;
+    align-self: flex-start;
+    margin-top: 0.5rem;
+    transition: color 0.2s ease;
+  }
+  
+  .icon-copy-btn:hover {
+    color: #388e3c;
+  }
+
+
   /* ✅ 버튼을 바깥쪽에 따로 배치 */
   .back-wrapper {
     text-align: center;
