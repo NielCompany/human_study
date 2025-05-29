@@ -20,11 +20,19 @@
     <!-- 우측: 예측 결과 -->
     <div class="result-info">
       <h2>예측 결과</h2>
-      <p><strong>파일 이름:</strong> {{ image_name }}</p>
-      <p><strong>예측 클래스:</strong> <span id="pred">{{ predicted_class }}</span></p>
+      <!-- <p><strong>파일 이름:</strong> {{ image_name }}</p> -->
+      <p><strong>대분류:</strong> <span id="pred">{{ predicted_class }}</span></p>
 
-      <!-- 📋 복사 버튼 -->
-      <button class="copy-btn" onclick="copyText()">📋 복사하기</button>
+      {% if gemini_description %}
+      <div class="gemini-box">
+        <p><strong>하자 설명 :</strong></p>
+        <div class="gemini-text">
+          {{ gemini_description | safe }}
+        </div>
+      </div>
+      {% endif %}
+
+      <button class="copy-btn" onclick="copyGeminiText()">📋 Copy</button>
     </div>
   </div>
 
@@ -38,10 +46,10 @@
 </main>
 
 <script>
-  function copyText() {
-    const text = document.getElementById('pred').innerText;
+  function copyGeminiText() {
+    const text = document.querySelector('.gemini-text').innerText;
     navigator.clipboard.writeText(text).then(() => {
-      alert('예측 결과가 복사되었습니다: ' + text);
+      alert('내용이 복사되었습니다');
     });
   }
 </script>
