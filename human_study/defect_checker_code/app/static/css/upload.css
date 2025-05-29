@@ -44,14 +44,21 @@ body, html {
   max-width: 700px;    /* 카드 폭 맞춤 */
   height: 400px;       /* 박스 높이 고정 */
   margin: 0 auto 2rem;
-  border: 2px dashed #bbb;
+  /* border: 2px dashed #bbb; */
   border-radius: 12px;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-
+.upload-box::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border: 2px dashed #bbb;
+  border-radius: 12px;
+  z-index: 1;             /* preview(2)보다 아래 */
+}
 /* 버튼 사이 분리선 */
 .upload-box::after {
   content: "";
@@ -71,7 +78,7 @@ body, html {
   width: 100%;
   height: 100%;
   object-fit: contain; /* 잘리지 않고 전체 노출 */
-  z-index: 1;
+  z-index: 2;
 }
 /* 업로드 후 */
 .upload-box.has-image .preview {
@@ -79,6 +86,10 @@ body, html {
 }
 .upload-box.has-image .upload-half {
   display: none;
+}
+
+.upload-box .upload-half {
+  z-index: 3;
 }
 
 /* ─────────────────────────────────────────────────────────
