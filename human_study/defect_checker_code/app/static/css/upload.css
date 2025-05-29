@@ -1,66 +1,137 @@
-/* 전체 wrapper */
+/* ─────────────────────────────────────────────────────────
+   전체 Reset & Wrapper
+──────────────────────────────────────────────────────── */
+body, html {
+  margin: 0;
+  padding: 0;
+}
 .upload-wrapper {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 3rem 1rem;
-    background-color: #f7f7f7;
-    min-height: 85vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f7f7f7;
+  min-height: 80vh;
+}
+
+/* ─────────────────────────────────────────────────────────
+   카드 스타일
+──────────────────────────────────────────────────────── */
+.upload-card {
+  background: #fff;
+  padding: 2.5rem 2rem;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  max-width: 800px;
+  width: 100%;
+  text-align: center;
+}
+.upload-card h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+.upload-card p {
+  color: #555;
+  font-size: 0.95rem;
+  margin-bottom: 2rem;
+}
+
+/* ─────────────────────────────────────────────────────────
+   점선 박스 & Preview
+──────────────────────────────────────────────────────── */
+.upload-box {
+  position: relative;
+  width: 100%;
+  max-width: 700px;    /* 카드 폭 맞춤 */
+  height: 400px;       /* 박스 높이 고정 */
+  margin: 0 auto 2rem;
+  border: 2px dashed #bbb;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 버튼 사이 분리선 */
+.upload-box::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 2px dashed #bbb;
+  z-index: 1;
+}
+
+.upload-box .preview {
+  display: none;       /* 업로드 전엔 숨김 */
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* 잘리지 않고 전체 노출 */
+  z-index: 1;
+}
+/* 업로드 후 */
+.upload-box.has-image .preview {
+  display: block;
+}
+.upload-box.has-image .upload-half {
+  display: none;
+}
+
+/* ─────────────────────────────────────────────────────────
+   촬영/업로드 버튼
+──────────────────────────────────────────────────────── */
+.upload-half {
+  flex: 1;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.upload-half label {
+  cursor: pointer;
+}
+.upload-half:hover {
+  background: #f2f2f2;
+}
+.upload-half input[type="file"] {
+  display: none;
+}
+
+/* ─────────────────────────────────────────────────────────
+   제출 버튼
+──────────────────────────────────────────────────────── */
+.upload-form button {
+  background: #111;
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.3s ease;
+}
+.upload-form button:hover {
+  background: #333;
+}
+
+/* ─────────────────────────────────────────────────────────
+   모바일 반응형 (필요 시)
+──────────────────────────────────────────────────────── */
+@media screen and (max-width: 600px) {
+  .upload-box {
+    height: auto;
+    aspect-ratio: auto;
   }
-  
-  /* 카드 스타일 */
-  .upload-card {
-    background: white;
-    padding: 2.5rem 2rem;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    max-width: 500px;
+  .upload-box .preview {
+    position: relative;
     width: 100%;
-    text-align: center;
+    height: auto;
   }
-  
-  /* 업로드 제목 */
-  .upload-card h2 {
-    font-size: 1.6rem;
-    margin-bottom: 0.5rem;
-  }
-  
-  .upload-card p {
-    color: #555;
-    font-size: 0.95rem;
-    margin-bottom: 1.5rem;
-  }
-  
-  /* 파일 선택 input */
-  .upload-form input[type="file"] {
-    margin: 1rem auto;
-    display: block;
-    padding: 6px;
-  }
-  
-  /* 이미지 미리보기 */
-  #preview {
-    display: block;
-    margin: 1rem auto 2rem;
-    max-width: 100%;
-    max-height: 320px;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  }
-  
-  /* 버튼 스타일 */
-  .upload-form button {
-    background-color: #111;
-    color: white;
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: background 0.3s ease;
-  }
-  
-  .upload-form button:hover {
-    background-color: #333;
-  }
-  
+}

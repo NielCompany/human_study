@@ -44,7 +44,7 @@ def predict():
             return render_template('result.html',
                                    image_name=filename,
                                    predicted_class=predicted_class)
-    return render_template('img_upload2.html')
+    return render_template('img_upload.html')
 # ---------------------------------------------------------
 
 
