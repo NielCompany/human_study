@@ -1,0 +1,102 @@
+/* 전체 wrapper - 로그인 박스를 중앙에 위치 */
+.login-wrap {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;  /* 수직 가운데 정렬 */
+    align-items: center;      /* 수평 가운데 정렬 */
+    background-color: #f9f9f9;
+    min-height: 70vh;
+    padding: 2rem 1rem;
+    box-sizing: border-box;
+  }
+  
+  /* 로그인 박스 디자인 */
+  .login-content {
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 6px;
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.1);
+    max-width: 420px;   /* ✅ 최대 너비 제한 */
+    width: 100%;        /* ✅ 너비가 화면을 넘지 않게 */
+    box-sizing: border-box;
+  }
+  
+  /* 폼 필드 스타일 */
+  .login-form .form-group {
+    margin-bottom: 20px;
+  }
+  
+  .login-form label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #333;
+  }
+  
+  .login-form input[type="text"],
+  .login-form input[type="email"],
+  .login-form input[type="password"] {
+    width: 100%;
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    box-sizing: border-box;
+  }
+  
+  .login-checkbox {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    font-size: 14px;
+    flex-wrap: wrap; /* ✅ 모바일 대응 */
+  }
+  
+  .login-checkbox a {
+    color: #ff4b5c;
+    text-decoration: none;
+  }
+  
+  .login-checkbox a:hover {
+    text-decoration: underline;
+  }
+  
+  /* 버튼 스타일 */
+  .au-btn {
+    display: block;
+    width: 100%;
+    background-color: #080a09d0;
+    color: white;
+    padding: 12px;
+    font-size: 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  
+  .au-btn:hover {
+    background-color: #218838;
+  }
+  
+  /* 회원가입 링크 */
+  .register-link {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 14px;
+  }
+  
+  .register-link a {
+    color: #ff4b5c;
+    font-weight: bold;
+    text-decoration: none;
+  }
+  
+  /*  모바일 대응 */
+  @media (max-width: 480px) {
+    .login-content {
+      padding: 20px;
+    }
+  }
+  

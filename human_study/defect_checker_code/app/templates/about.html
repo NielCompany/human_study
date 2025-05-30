@@ -1,0 +1,20 @@
+{% extends "layout/layout.html" %}
+
+{% block title_block %}
+  <title>ABOUT</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/about.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="about-container">
+    <section class="greeting">
+      <h2>AI 하자 점검 서비스를 소개합니다</h2>
+      <p>
+        안녕하세요! <strong>AI Defect Checker</strong>는<br>
+        <strong>하자 사진을 업로드하기만 하면</strong> 자동으로 하자를 분석하고<br>
+        <strong>위치 강조 + 설명 + 리포트</strong>까지 생성해주는 스마트한 서비스입니다.
+      </p>
+    </section>
+</main>
+
+{% endblock %}

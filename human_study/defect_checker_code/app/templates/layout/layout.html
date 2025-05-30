@@ -5,12 +5,41 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   {% block title_block %}<title>AI 하자 점검</title>{% endblock %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/chatbot.css') }}">
 </head>
 <body>
+
   <div class="wrapper">
     {% include 'layout/header.html' %}
+
+    <!-- Flash 메시지 출력용 (숨겨진 div) -->
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div id="flash-message" style="display: none;">{{ messages[0] }}</div>
+      {% endif %}
+    {% endwith %}
+
     {% block content %}{% endblock %}
-  </div>
+      <!-- JS 연결 -->
+  <script src="{{ url_for('static', filename='js/message.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/chatbot.js') }}"></script>
+
+  <!-- layout.html의 body 끝쪽 (footer 위 or 아래) -->
+  <!-- 챗봇 열기 버튼 -->
+  <div class="chatbot-toggle" id="chatbot-toggle" onclick="toggleChat()">💬</div>
+
+
+  <div class="chatbot-box" id="chat-box">
+    <div class="chat-header" id="chat-header">DEFECT AI<span onclick="toggleChat()" class="close-btn">✖</span></div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input-area">
+      <input type="text" id="chat-input" placeholder="메시지를 입력하세요..." />
+      <button onclick="sendMessage()">전송</button>
+    </div>
+    </div>
   {% include 'layout/footer.html' %}
+
+
+</div>
 </body>
 </html>
