@@ -15,6 +15,8 @@ html, body {
     display: flex;
     flex-direction: column;
   }
+
+  
   
   /* Header */
   .header {
@@ -69,12 +71,13 @@ html, body {
     cursor: pointer;
     transition: 0.3s;
   }
-  
+
   .cta:hover {
     background: white;
     color: black;
     border: 1px solid black;
   }
+  
   
   /* Footer */
   .footer {
@@ -112,3 +115,4 @@ html, body {
     }
   }
   
+ 

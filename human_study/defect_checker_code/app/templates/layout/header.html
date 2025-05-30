@@ -1,10 +1,16 @@
 <header class="header">
-    <div class="logo">AI Defect Checker</div>
+  <div class="logo">
+    Defect Checker
+  </div>
     <nav class="nav">
-      <a href="/">Home</a>
-      <a href="#">소개</a>
-      <a href="#">사용방법</a>
-      <a href="#">문의</a>
+      <a href="/">HOME</a>
+      <a href="{{ url_for('about') }}">ABOUT US</a>
+      <a href="#">INQUIRY</a>
+      {% if session.get('loginuser') %}
+      <a href="{{ url_for('logout') }}">LOGOUT</a>
+      {% else %}
+      <a href="{{ url_for('login') }}">LOGIN</a>
+      {% endif %}
     </nav>
   </header>
   
