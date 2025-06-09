@@ -1,15 +1,20 @@
 # 사진을 불러오고 텍스트만 추출(easyocr 사용)해서 json파일로 저장 
 import requests
+import os
 import uuid
 import time
 import json
 from pathlib import Path
 from collections import OrderedDict
 from tqdm import tqdm
+from dotenv import load_dotenv
+
+load_dotenv()
+CLOBA_API_KEY = os.getenv("CLOBA_API_KEY")
 
 # ✅ CLOVA OCR 설정
 API_URL = 'https://2cphq1vxd0.apigw.ntruss.com/custom/v1/42151/a1af5c2a61e3b09e3f2d750b86dd3d4b58e873f8a3bcdbe138c95b6d24e5cc7c/general'  # 실제 값으로 교체
-SECRET_KEY = 'TnlkT01MQmhxQ0tiQlJNeHlsRlFaamhRWGVqdHFycnY='  # 실제 키로 교체
+SECRET_KEY = CLOBA_API_KEY  # 실제 키로 교체
 INPUT_DIR = Path("data/samples3")
 OUTPUT_DIR = Path("data/ocr_texts3")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
