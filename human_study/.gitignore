@@ -454,3 +454,10 @@ pyrightconfig.json
 .ionide
 
 # End of https://www.toptal.com/developers/gitignore/api/python,visualstudiocode,flask
+
+# 
+# 이미지 및 벡터 DB 등 무시
+*.jpg
+*.pkl
+*.faiss
+*.txt

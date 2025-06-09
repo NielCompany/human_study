@@ -1,3 +1,4 @@
+# 사진을 불러오고 텍스트만 추출(easyocr 사용)해서 json파일로 저장 
 import requests
 import uuid
 import time

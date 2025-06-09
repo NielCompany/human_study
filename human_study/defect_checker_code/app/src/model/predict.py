@@ -44,7 +44,7 @@ mapping_data = """
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = models.resnet50(weights=None)
 model.fc = torch.nn.Linear(model.fc.in_features, len(classes))
-model.load_state_dict(torch.load('models/best_high_acc_original.pth', map_location=device))
+model.load_state_dict(torch.load('models/label_labeled_sum_acc.pth', map_location=device))
 model = model.to(device)
 model.eval()
 
