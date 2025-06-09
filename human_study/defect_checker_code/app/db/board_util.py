@@ -3,7 +3,7 @@ from datetime import date
 
 def get_connection():
     return pymysql.connect(
-        host="localhost",
+        host="192.168.0.88",
         database="defectdb",
         user="nielpj",
         password="nielpj",
