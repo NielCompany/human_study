@@ -61,7 +61,7 @@ function dragElement(elmnt, handle) {
     if (!message) return;
   
     const chatLog = document.getElementById("chat-messages");
-    chatLog.innerHTML += `<div class="chat user"><b>나:</b> ${message}</div>`;
+    chatLog.innerHTML += `<div class="chat user">${message}</div>`;
     chatLog.scrollTop = chatLog.scrollHeight;
   
     input.value = "";
@@ -75,13 +75,13 @@ function dragElement(elmnt, handle) {
       });
   
       const data = await response.json();
-      chatLog.innerHTML += `<div class="chat bot"><b>AI:</b> ${data.reply}</div>`;
+      chatLog.innerHTML += `<div class="chat bot"> ${data.reply}</div>`;
       chatLog.scrollTop = chatLog.scrollHeight;
   
       // 로그 저장
       localStorage.setItem("chat_log", chatLog.innerHTML);
     } catch (error) {
-      chatLog.innerHTML += `<div class="chat bot"><b>AI:</b> 오류가 발생했습니다.</div>`;
+      chatLog.innerHTML += `<div class="chat bot">오류가 발생했습니다.</div>`;
     }
   }
   
@@ -125,8 +125,28 @@ function dragElement(elmnt, handle) {
       localStorage.setItem("chat_input", input.value);
     });
   
-    // 전송 버튼도 연결
+    // 전송 버튼 연결
     const sendBtn = document.querySelector(".chat-input-area button");
     if (sendBtn) sendBtn.addEventListener("click", sendMessage);
   });
-  
+
+    // 브라우저 종료 후 재접속 시 대화 로그 삭제
+    document.addEventListener("DOMContentLoaded", function () {
+    const isReturning = !sessionStorage.getItem("chat_session_active");
+    sessionStorage.setItem("chat_session_active", "true");
+
+    if (isReturning) {
+      clearChatData();
+    }
+  });
+
+  // chat bot 초기화 
+  function clearChatData() {
+  localStorage.removeItem("chat_log");
+  localStorage.removeItem("chat_input");
+  localStorage.removeItem("chatbox_top");
+  localStorage.removeItem("chatbox_left");
+  localStorage.removeItem("chat_open");
+}
+
+

@@ -1,0 +1,57 @@
+{% extends "layout/layout.html" %}
+
+{% block title_block %}
+  <title>게시판 목록</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/board.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>INQUIRY</h2>
+    <hr>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%; text-align: center;">No</th>
+        <th style="width: 70%; text-align: center;" >제목</th>
+        <th style="width: 10%; text-align: center;" >조회수</th>
+        <th style="width: 10%; text-align: center;">작성일</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for post in posts %}
+      <tr onclick="location.href='/board/{{ post.id }}'" style="cursor: pointer;">
+        <td>{{ post.id }}</td>
+        <td>{{ post.title }}</td>
+        <td>{{ post.view_count }}</td>
+        <td>{{ post.created_at.strftime('%Y-%m-%d') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- ✅ pagination + 글쓰기 버튼을 하나의 줄에 배치 -->
+  <div class="pagination-write-wrap">
+    <ul class="pagination">
+      {% if page > 1 %}
+        <li><a href="?page={{ page - 1 }}">이전</a></li>
+      {% endif %}
+      {% for p in range(1, total_pages + 1) %}
+        <li class="{{ 'active' if p == page else '' }}">
+          <a href="?page={{ p }}">{{ p }}</a>
+        </li>
+      {% endfor %}
+      {% if page < total_pages %}
+        <li><a href="?page={{ page + 1 }}">다음</a></li>
+      {% endif %}
+    </ul>
+
+    <!-- ✅ 글쓰기 버튼 -->
+    <a href="{{ url_for('board_write') }}" class="write-btn">쓰기</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+  <script src="{{ url_for('static', filename='js/board.js') }}"></script>
+{% endblock %}
