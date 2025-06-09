@@ -99,12 +99,12 @@ for epoch in range(num_epochs):
         torch.save(model.state_dict(), 'best_resnet50_2.pth')
         patience_counter = 0
         print("✅ Best model saved (Val Loss:", round(val_loss, 4), ")")
-    else:
-        patience_counter += 1
-        print(f"⏳ Patience: {patience_counter}/{early_stopping_patience}")
-        if patience_counter >= early_stopping_patience:
-            print("🛑 Early stopping triggered.")
-            break
+    # else:
+    #     patience_counter += 1
+    #     print(f"⏳ Patience: {patience_counter}/{early_stopping_patience}")
+    #     if patience_counter >= early_stopping_patience:
+    #         print("🛑 Early stopping triggered.")
+    #         break
 
 # ✅ 손실 곡선 그리기
 plt.figure(figsize=(10, 5))

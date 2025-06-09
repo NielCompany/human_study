@@ -38,9 +38,14 @@ def login():
         flash("이메일 또는 비밀번호가 일치하지 않습니다.")
         return redirect(url_for('login'))
 
-    session['loginuser'] = user[1]  # email
-    username = user[3]              # username
-    flash(f"{username}님 반갑습니다!")
+    # ✅ 사용자 정보 세션에 저장
+    session['loginuser'] = {
+        "id": user[0],
+        "email": user[1],
+        "username": user[3]
+    }
+
+    flash(f"{user[3]}님 반갑습니다!")
     return redirect(url_for('index'))
 
 
@@ -85,17 +90,25 @@ def register():
 @app.route("/logout")
 def logout():
     session.clear()
-    return redirect(url_for("index"))
+    return redirect(url_for("index", cleared="true"))
 
 # -------------------------------
 # chatbot 
 # -------------------------------
 from utils.gemini_utils import ask_gemini  
+from utils.rag_utils import answer_with_rag  
+# @app.route("/chat", methods=["POST"])
+# def chat_api():
+#     user_message = request.json.get("message", "")
+#     bot_reply = ask_gemini(user_message)
+#     return jsonify({"reply": bot_reply})
+
+# 
 
 @app.route("/chat", methods=["POST"])
 def chat_api():
     user_message = request.json.get("message", "")
-    bot_reply = ask_gemini(user_message)
+    bot_reply = answer_with_rag(user_message)
     return jsonify({"reply": bot_reply})
 
 
@@ -103,10 +116,150 @@ def chat_api():
 # ABOUT US 
 # -------------------------------
 
-## index rendering 
+## about rendering 
 @app.route("/about")
 def about():
     return render_template("about.html")
+
+
+##  board
+from db import board_util
+
+@app.route("/board")
+def board_list():
+    page = int(request.args.get('page', 1))  # 기본값 1
+    per_page = 10
+
+    posts, total = board_util.get_posts_by_page(page, per_page)
+    total_pages = (total + per_page - 1) // per_page
+
+    return render_template("board/board_list.html",
+                           posts=posts,
+                           page=page,
+                           total_pages=total_pages)
+
+## 게시글 작성 
+@app.route("/board/write", methods=["GET", "POST"])
+def board_write():
+    if 'loginuser' not in session:
+        flash("로그인 후 글쓰기가 가능합니다.")
+        return redirect(url_for("login"))
+
+    if request.method == "GET":
+        return render_template("board/board_write.html")
+
+    # POST 처리 (제목, 내용 저장)
+    data = request.get_json()
+    title = data.get("title")
+    content = data.get("content")
+    user_id = session["loginuser"]["id"]
+
+    print("POST 요청 수신됨:", data, )
+
+    if not title or not content:
+        return jsonify({"message": "제목과 내용을 모두 입력해주세요."}), 400
+
+    success = board_util.insert_post(user_id, title, content)
+    if not success:
+        return jsonify({"message": "글쓰기 중 오류가 발생했습니다."}), 500
+
+    return jsonify({"message": "글이 성공적으로 작성되었습니다."})
+
+# 게시글 내용에 img 포함 될 때 
+@app.route("/board/upload_image", methods=[ "POST"])
+def upload_image():
+    if "file" not in request.files:
+        return jsonify({"error": "파일이 없습니다."}), 400
+
+    file = request.files["file"]
+    filename = secure_filename(file.filename)
+    save_path = os.path.join("static", "board_uploads", filename)
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    file.save(save_path)
+
+    file_url = url_for('static', filename=f'board_uploads/{filename}')
+    return jsonify({"url": file_url})
+
+# -------------------------------
+# 게시글 상세보기
+# -------------------------------
+@app.route("/board/<int:post_id>")
+def board_detail(post_id):
+    if "loginuser" not in session:
+        flash("로그인 후 이용 가능합니다.")
+        return redirect(url_for("login"))
+
+    post = board_util.get_post_by_id(post_id)
+    if not post:
+        flash("해당 게시글이 존재하지 않습니다.")
+        return redirect(url_for("board_list"))
+
+    # 조회수 증가 (한 번만)
+    board_util.increase_view_count(post_id)
+
+    # 현재 로그인한 유저ID
+    current_user_id = session["loginuser"]["id"]
+    return render_template("board/board_detail.html", post=post, current_user_id=current_user_id)
+
+# -------------------------------
+# 게시글 수정 페이지 출력 및 저장
+# -------------------------------
+@app.route("/board/<int:post_id>/edit", methods=["GET", "POST"])
+def board_edit(post_id):
+    if "loginuser" not in session:
+        flash("로그인 후 이용 가능합니다.")
+        return redirect(url_for("login"))
+
+    post = board_util.get_post_by_id(post_id)
+    if not post:
+        flash("해당 게시글이 존재하지 않습니다.")
+        return redirect(url_for("board_list"))
+
+    current_user_id = session["loginuser"]["id"]
+    if post["user_id"] != current_user_id:
+        flash("해당 게시글을 수정할 수 없습니다.")
+        return redirect(url_for("board_detail", post_id=post_id))
+
+    if request.method == "GET":
+        return render_template("board/board_edit.html", post=post)
+
+    # POST (AJAX)
+    data = request.get_json()
+    if data is None:
+        return jsonify({"message": "잘못된 요청입니다."}), 400
+
+    title = data.get("title")
+    content = data.get("content")
+    if not title or not content:
+        return jsonify({"message": "제목과 내용을 모두 입력해주세요."}), 400
+
+    success = board_util.update_post(post_id, title, content)
+    if not success:
+        return jsonify({"message": "수정 중 오류가 발생했습니다."}), 500
+
+    return jsonify({"message": "게시글이 수정되었습니다."})
+
+# -------------------------------
+# 게시글 삭제 (소프트 삭제)
+# -------------------------------
+@app.route("/board/<int:post_id>/delete", methods=["POST"])
+def board_delete(post_id):
+    if "loginuser" not in session:
+        return jsonify({"message": "로그인 후 이용 가능합니다."}), 401
+
+    post = board_util.get_post_by_id(post_id)
+    if not post:
+        return jsonify({"message": "해당 게시글이 존재하지 않습니다."}), 404
+
+    current_user_id = session["loginuser"]["id"]
+    if post["user_id"] != current_user_id:
+        return jsonify({"message": "삭제 권한이 없습니다."}), 403
+
+    success = board_util.delete_post(post_id)
+    if not success:
+        return jsonify({"message": "삭제 중 오류가 발생했습니다."}), 500
+
+    return jsonify({"message": "삭제되었습니다."})
 
 # predict----------------------------------------------------------------------------------------
 

@@ -32,6 +32,7 @@
 import os
 from dotenv import load_dotenv
 import google.generativeai as genai
+import re
 
 # 1. 환경 설정
 load_dotenv()
@@ -46,8 +47,35 @@ llm_model = genai.GenerativeModel("gemini-2.0-flash")
 #     profile_text = f.read()
 
 # 4. 첫 인사 플래그 & 대화 저장
-greeted = False
+greeted = True
 conversation_history = []
+
+# 응답 정리 함수 추가 
+def format_answer(answer: str) -> str:
+    # 1. 불필요한 인삿말 제거
+    answer = re.sub(r"(안녕하세요[.!]?\s*궁금한 내용을 물어보세요!?)*", "", answer).strip()
+
+    # 2. 마크다운 강조 제거 (**내용** → 내용)
+    answer = re.sub(r"\*\*(.*?)\*\*", r"\1", answer)
+
+    # 3. 번호와 내용 사이 띄어쓰기 추가 (1.내용 → 1. 내용)
+    answer = re.sub(r"(\d+)\.(\S)", r"\1. \2", answer)
+
+    # 4. 하이픈(-), 별표(*)로 시작하는 항목 정리 → 들여쓰기
+    answer = re.sub(r"\n?[\-\*]{1,2} ?([^\n]+)", r"\n  - \1", answer)
+
+    # 5. 여러 줄 바꿈 정리 (3줄 이상 → 2줄)
+    answer = re.sub(r"\n{3,}", "\n\n", answer)
+
+    # 6. 줄 바꿈 후 공백 제거
+    answer = re.sub(r"\n[ \t]+", "\n", answer)
+
+    # 7. "AI:" 제거 (불필요한 접두사일 경우)
+    answer = re.sub(r"^AI:\s*", "", answer)
+
+    return answer.strip()
+
+
 
 # 5. 메인 함수
 def ask_gemini(question):
@@ -71,10 +99,13 @@ def ask_gemini(question):
             지침:
             - 인삿말은 챗봇이 출력하지 마세요. 첫 인사는 시스템이 이미 출력했습니다.
             - 본론만 정확하고 친절하게 대답해 주세요.
-            - 관련 없는 질문은 일반적인 AI 지식으로 간단하고 친절하게 설명하세요.
+            - 문서나 시스템에 정보가 부족하더라도, 유사한 사례나 일반적인 지식에 기반해 정중하고 유용하게 답변하세요.
+            - "해당 기능을 제공하지 않습니다" 또는 "답변할 수 없습니다"와 같은 부정적인 표현은 피하세요.
             - 동일 문장을 반복하지 말고, 줄바꿈과 존댓말을 사용하세요.
             - 같은 내용을 반복하지 말고, 표현을 다양하게 바꿔서 설명하세요.
             - 능숙하다는 표현 대신 어떤 활동에서 사용했는지도 언급하세요.
+            - 항목 나열 시 **숫자나 하이픈(-), 들여쓰기, 줄바꿈을 명확하게 사용하여 가독성을 높이세요.**
+            - 마크다운 대신 일반 텍스트 방식으로 포맷팅하세요. 예: "1. 항목", " - 세부사항", 빈 줄 사용
             사용자 질문: {question}
             """
     print("🧪 사용자 질문:", question)
@@ -82,10 +113,14 @@ def ask_gemini(question):
     try:
         response = llm_model.generate_content([prompt])
         answer = response.text.strip()
+        answer = format_answer(answer)  # ✅ 응답 정리 함수 적용
 
         # 대화 기록 저장
         conversation_history.append((question, answer))
 
-        return greeting + answer
+        if greeting:
+            return greeting  # 첫 호출일 경우 인사만 출력하고 끝
+        else:
+            return answer  # 이후 호출은 본론만 출력
     except Exception as e:
         return f"❌ 오류 발생: {str(e)}"
