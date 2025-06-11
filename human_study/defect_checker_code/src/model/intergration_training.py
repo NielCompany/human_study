@@ -1,3 +1,8 @@
+# image_process_1.py 파일 실행 후에 싫행 
+
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 import torch
 import torch.nn as nn
 from torchvision import datasets, transforms, models
@@ -5,7 +10,6 @@ from torch.utils.data import DataLoader
 from sklearn.metrics import f1_score, accuracy_score
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-import os
 import time
 
 # ✅ 디바이스 설정
@@ -17,6 +21,7 @@ batch_size = 32
 num_epochs = 50
 early_stopping_patience = 5
 best_val_loss = float('inf')
+best_val_acc = 0.0
 patience_counter = 0
 
 # ✅ 전처리 정의 (비율 유지 후 센터 크롭)
@@ -45,6 +50,8 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
 # ✅ 학습 기록용
 train_losses = []
 val_losses = []
+acc_list = []
+f1_list = []
 
 # ✅ 학습 루프
 for epoch in range(num_epochs):
@@ -89,6 +96,8 @@ for epoch in range(num_epochs):
 
     acc = accuracy_score(val_trues, val_preds)
     f1 = f1_score(val_trues, val_preds, average='macro')
+    acc_list.append(acc)
+    f1_list.append(f1)
     elapsed = time.time() - start_time
 
     print(f"\n📘 Epoch {epoch+1} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | Acc: {acc:.4f} | F1: {f1:.4f} | ⏱ {elapsed:.2f}s")
@@ -96,9 +105,15 @@ for epoch in range(num_epochs):
     # ✅ 모델 저장 기준: val_loss
     if val_loss < best_val_loss:
         best_val_loss = val_loss
-        torch.save(model.state_dict(), 'best_resnet50_2.pth')
+        # torch.save(model.state_dict(), 'best_resnet50_2.pth')
+        torch.save(model.state_dict(), 'label_labeled_sum_val_loss.pth')
         patience_counter = 0
         print("✅ Best model saved (Val Loss:", round(val_loss, 4), ")")
+
+    if acc > best_val_acc:
+        best_val_acc = acc
+        torch.save(model.state_dict(), 'label_labeled_sum_acc.pth')
+        print(f"✅ 모델 저장됨 (Acc 기준) → " , round(acc, 4), ")")
     # else:
     #     patience_counter += 1
     #     print(f"⏳ Patience: {patience_counter}/{early_stopping_patience}")
@@ -106,14 +121,18 @@ for epoch in range(num_epochs):
     #         print("🛑 Early stopping triggered.")
     #         break
 
+
+
 # ✅ 손실 곡선 그리기
 plt.figure(figsize=(10, 5))
 plt.plot(train_losses, label='Train Loss')
 plt.plot(val_losses, label='Validation Loss')
+plt.plot(acc_list, label='Accuracy')
+plt.plot(f1_list, label='F1 Score')
 plt.xlabel("Epoch")
-plt.ylabel("Loss")
-plt.title("Training vs Validation Loss")
+plt.ylabel("Value")
+plt.title("Training Loss / Validation Loss / Accuracy / F1 Score")
 plt.legend()
 plt.grid(True)
-plt.savefig("loss_plot.png")
+plt.savefig("all_values.png")
 plt.show()
