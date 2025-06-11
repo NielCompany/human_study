@@ -2,33 +2,59 @@
 import os
 import pickle
 import re
+import warnings
 from dotenv import load_dotenv
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.schema import Document
 import google.generativeai as genai
 from .gemini_utils import ask_gemini
 
+# suppress TensorFlow and other logs
+os.environ.setdefault('TF_ENABLE_ONEDNN_OPTS', '0')
+os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '2')
+warnings.filterwarnings('ignore', category=DeprecationWarning)
+warnings.filterwarnings('ignore', category=FutureWarning)
 
-
-# 1. 환경 변수 및 모델 설정
+# 1. ENV 로드 and genai configure at module load
 load_dotenv()
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-llm = genai.GenerativeModel("gemini-2.0-flash")
+genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
 
-# 2. 벡터스토어 경로
-VECTORSTORE_PATH = os.path.join(os.path.dirname(__file__), "faiss_db", "vectorstore.pkl")
-
-# 3. 임베딩 모델
-embedding_model = HuggingFaceEmbeddings(model_name="jhgan/ko-sbert-nli")
-
-# 4. 대화 기록 전역 변수
-greeted = False
+# 2. 전역 캐시 변수 선언
+VECTORSTORE_PATH = os.path.join(os.path.dirname(__file__), 'faiss_db', 'vectorstore.pkl')
+_vectorstore = None
+_llm = None
+_embedding_model = None
 conversation_history = []
 
-# 5. 응답 정리 함수
+# 3. Lazy 초기화 함수
+
+def get_vectorstore():
+    global _vectorstore
+    if _vectorstore is None and os.path.exists(VECTORSTORE_PATH):
+        with open(VECTORSTORE_PATH, 'rb') as f:
+            _vectorstore = pickle.load(f)
+    return _vectorstore
+
+
+def get_embedding_model():
+    global _embedding_model
+    if _embedding_model is None:
+        _embedding_model = HuggingFaceEmbeddings(model_name='jhgan/ko-sbert-nli')
+    return _embedding_model
+
+
+def get_llm():
+    global _llm
+    if _llm is None:
+        # genai already configured at import, just instantiate
+        _llm = genai.GenerativeModel('gemini-2.0-flash')
+    return _llm
+
+# 4. 응답 정리 함수 (unchanged)
+
 def format_answer(answer: str) -> str:
-    answer = re.sub(r"(안녕하세요[.!]?\s*궁금한 내용을 물어보세요!?)*", "", answer).strip()
+    answer = re.sub(r"(안녕하세요[.!]?\s*궁금한 내용을 물어보세요!?)", "", answer).strip()
     answer = re.sub(r"\*\*(.*?)\*\*", r"\1", answer)
     answer = re.sub(r"(\d+)\.(\S)", r"\1. \2", answer)
     answer = re.sub(r"\n?[\-\*]{1,2} ?([^\n]+)", r"\n  - \1", answer)
@@ -37,31 +63,24 @@ def format_answer(answer: str) -> str:
     answer = re.sub(r"^AI:\s*", "", answer)
     return answer.strip()
 
-# ✅ 6. 메인 RAG 함수
-def answer_with_rag(query: str, top_k=3) -> str:
+# 5. 메인 RAG 함수 (lazy init 적용)
+
+def answer_with_rag(query: str, top_k: int = 3) -> str:
     global conversation_history
 
-    # 1. 벡터스토어 로드
-    if not os.path.exists(VECTORSTORE_PATH):
-        return ask_gemini(query)  # fallback to 일반 지식 모드
+    vectorstore = get_vectorstore()
+    if not vectorstore:
+        return ask_gemini(query)
 
-    with open(VECTORSTORE_PATH, "rb") as f:
-        vectorstore = pickle.load(f)
-
-    # 2. 유사한 문서 검색
     docs: list[Document] = vectorstore.similarity_search(query, k=top_k)
-
-    # 2-1. 관련 문서가 거의 없으면 일반 지식으로 fallback
     if not docs or all(len(doc.page_content.strip()) < 30 for doc in docs):
-        return ask_gemini(query)  # ✅ 일반 LLM 답변으로 fallback
+        return ask_gemini(query)
 
-    # 3. context와 대화 기록 구성
-    context = "\n\n".join([doc.page_content for doc in docs])
-    history_text = ""
-    for i, (q, a) in enumerate(conversation_history[-6:]):
-        history_text += f"[대화{i+1}]\n사용자: {q}\nAI: {a}\n"
+    context = '\n\n'.join(doc.page_content for doc in docs)
+    history_text = ''.join(
+        f"[대화{i+1}]\n사용자: {q}\nAI: {a}\n" for i, (q, a) in enumerate(conversation_history[-6:])
+    )
 
-    # 4. 프롬프트 구성
     prompt = f"""
     당신은 아파트 하자 점검 AI 비서입니다.
     아래 문서와 대화 기록을 참고하여 사용자 질문에 근거 있는 답변을 제공하세요.
@@ -89,11 +108,10 @@ def answer_with_rag(query: str, top_k=3) -> str:
     """
 
     try:
+        llm = get_llm()
         response = llm.generate_content(prompt)
         answer = format_answer(response.text.strip())
         conversation_history.append((query, answer))
         return answer
     except Exception as e:
-        return f"❌ 오류 발생: {str(e)}"
-
-
+        return f"❌ 오류 발생: {e}"

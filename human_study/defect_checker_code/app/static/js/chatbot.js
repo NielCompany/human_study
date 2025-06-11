@@ -1,41 +1,57 @@
-// 드래그 이동 기능 + 위치 기억
+// 드래그 이동 기능 + 위치 기억 (with 화면 경계 클램핑)
 function dragElement(elmnt, handle) {
-    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-  
-    if (handle) {
-      handle.onmousedown = dragMouseDown;
-    }
-  
-    function dragMouseDown(e) {
-      e.preventDefault();
-      pos3 = e.clientX;
-      pos4 = e.clientY;
-      document.onmouseup = closeDragElement;
-      document.onmousemove = elementDrag;
-    }
-  
-    function elementDrag(e) {
-      e.preventDefault();
-      pos1 = pos3 - e.clientX;
-      pos2 = pos4 - e.clientY;
-      pos3 = e.clientX;
-      pos4 = e.clientY;
-  
-      elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
-      elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
-      elmnt.style.bottom = "auto";
-      elmnt.style.right = "auto";
-  
-      // 위치 기억
-      localStorage.setItem("chatbox_top", elmnt.style.top);
-      localStorage.setItem("chatbox_left", elmnt.style.left);
-    }
-  
-    function closeDragElement() {
-      document.onmouseup = null;
-      document.onmousemove = null;
-    }
+  let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+  if (handle) {
+    handle.onmousedown = dragMouseDown;
   }
+
+  function dragMouseDown(e) {
+    e.preventDefault();
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    document.onmouseup = closeDragElement;
+    document.onmousemove = elementDrag;
+  }
+
+  function elementDrag(e) {
+    e.preventDefault();
+    // 이동량 계산
+    pos1 = pos3 - e.clientX;
+    pos2 = pos4 - e.clientY;
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+
+    // 새 위치
+    let newTop  = elmnt.offsetTop  - pos2;
+    let newLeft = elmnt.offsetLeft - pos1;
+
+    // 화면 경계 계산
+    const minTop    = 0;
+    const minLeft   = 0;
+    const maxTop    = window.innerHeight - elmnt.offsetHeight;
+    const maxLeft   = window.innerWidth  - elmnt.offsetWidth;
+
+    // 경계 안으로 클램핑
+    newTop  = Math.max(minTop,  Math.min(newTop,  maxTop));
+    newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
+
+    // 위치 적용
+    elmnt.style.top    = newTop  + "px";
+    elmnt.style.left   = newLeft + "px";
+    elmnt.style.bottom = "auto";
+    elmnt.style.right  = "auto";
+
+    // 위치 기억
+    localStorage.setItem("chatbox_top",  elmnt.style.top);
+    localStorage.setItem("chatbox_left", elmnt.style.left);
+  }
+
+  function closeDragElement() {
+    document.onmouseup   = null;
+    document.onmousemove = null;
+  }
+}
   
   // 챗봇 열기/닫기 토글 (상태 기억)
   function toggleChat() {

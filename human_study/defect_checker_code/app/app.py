@@ -266,62 +266,88 @@ def board_delete(post_id):
 from werkzeug.utils import secure_filename
 from src.model.predict import predict_image, get_defect_keywords
 # from utils.gemini_utils import explain_by_gemini  # Gemini API 호출 함수
-from utils.gpt4o_utils import explain_by_gpt4o_with_image
+from utils.gpt4o_utils import explain_by_gpt4o_with_image, client
 import os
 
 UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+
+
 @app.route('/predict', methods=['GET', 'POST'])
 def predict():
     if request.method == 'POST':
-        file = request.files['image']
-        if file:
-            filename = secure_filename(file.filename)
-            filepath = os.path.join(UPLOAD_FOLDER, filename)
-            file.save(filepath)
+        file = request.files.get('image')
+        if not file:
+            return render_template('img_upload.html', error="이미지를 업로드해주세요.")
 
-            predicted_class = predict_image(filepath)
-            keywords = get_defect_keywords(predicted_class)
+        # 1) 파일 저장
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(filepath)
 
+        # 2) 기본 분류
+        predicted_class = predict_image(filepath)
+        keywords = get_defect_keywords(predicted_class)
 
-            prompt = f"""
-            다음은 하자 점검 이미지에 대한 분석 결과입니다.
+        # 3) 원본 프롬프트(상세 지시) 그대로 사용
+        prompt = f"""
+        다음은 하자 점검 이미지에 대한 분석 결과입니다.
 
-            - 분류된 하자 유형: {predicted_class}
-            - 해당 유형의 세부 하자 항목 후보들: {', '.join(keywords) if keywords else '없음'}
+        - 분류된 하자 유형: {predicted_class}
+        - 해당 유형의 세부 하자 항목 후보들: {', '.join(keywords) if keywords else '없음'}
 
-            **아래 형식을 반드시 그대로 지켜주세요.**  
-            **첫 번째 줄**(세부 항목)과 **두 번째 줄**(위치) 사이에 반드시 줄바꿈(`\n`)이 들어가야 합니다.
+        **아래 형식을 반드시 그대로 지켜주세요.**  
+        **첫 번째 줄**(세부 항목)과 **두 번째 줄**(위치) 사이에 반드시 줄바꿈(`\n`)이 들어가야 합니다.
 
-            예시)
-            코킹 마감 불량 -
-            이미지를 봤을 때 코킹 마감 부위에 코킹 마감 불량이 보입니다.  
-            실리콘 마감이 깔끔하게 처리되지 않고 끊어진 부분이 확인됩니다.
+        예시)
+        코킹 마감 불량 -
+        이미지를 봤을 때 코킹 마감 부위에 코킹 마감 불량이 보입니다.  
+        실리콘 마감이 깔끔하게 처리되지 않고 끊어진 부분이 확인됩니다.
 
-            위 예시처럼, **실제 이미지에 어떤 하자가 보이는지 구체적으로 추론하여**,
-            이렇게 `\n`이 들어간다고 생각하시고,
-            `\n` 문자를 쓰지 마시고, 실제 엔터(줄바꿈)만 사용해 주세요. 
-            아래 항목을 포함해서 요약해 주세요 (4줄 이내):
+        위 예시처럼, **실제 이미지에 어떤 하자가 보이는지 구체적으로 추론하여**,
+        이렇게 `\n`이 들어간다고 생각하시고,
+        `\n` 문자를 쓰지 마시고, 실제 엔터(줄바꿈)만 사용해 주세요. 
+        아래 항목을 포함해서 요약해 주세요 (4줄 이내):
 
-            1. 가장 유사해 보이는 세부 하자 항목 1개 선택 예시)코킹 마감 불량 - 
-            2. 구체적인 증상 묘사 (이미지 기반 추론처럼)
+        1. 가장 유사해 보이는 세부 하자 항목 1개 선택 예시)코킹 마감 불량 - 
+        2. 구체적인 증상 묘사 (이미지 기반 추론처럼)
 
-            
-            기술 용어는 유지하되, 불필요한 서론 없이 간단히 존댓말로 설명해 주세요.
-            정확하지 않은 부분에 대해서는 서술하지 않으셔야 합니다.
-            정확한 내용만 설명해주세요.
-            띄어쓰기 및 줄바꿈 처리도 깔끔하게 해주세요.
+        기술 용어는 유지하되, 불필요한 서론 없이 간단히 존댓말로 설명해 주세요.
+        정확하지 않은 부분에 대해서는 서술하지 않으셔야 합니다.
+        정확한 내용만 설명해주세요.
+        띄어쓰기 및 줄바꿈 처리도 깔끔하게 해주세요.
+        """
 
-            """
-            
+        # 4) 첫 번째 GPT-4o 호출: 상세 설명 생성
+        gpt4o_description = explain_by_gpt4o_with_image(filepath, prompt)
 
-            gpt4o_description = explain_by_gpt4o_with_image(filepath, prompt)
+        # 5) 두 번째 GPT-4o 호출: yes/no로 하자 유무 확인
+        confirm = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{
+                "role": "user",
+                "content": (
+                    "아래 설명이 실제 하자 설명인가요? 하자가 없으면 '아니오', 있으면 '예'라고만 답해주세요.\n\n"
+                    f"{gpt4o_description}"
+                )
+            }],
+            temperature=0
+        )
+        answer = confirm.choices[0].message.content.strip()
 
-            return render_template('result.html',
-                                   image_name=filename,
-                                   predicted_class=predicted_class,
-                                   gemini_description=gpt4o_description)
+        # 6) '아니오'면 predicted_class만 '없음'으로 변경
+        if answer.startswith("아니오"):
+            predicted_class = "없음"
+
+        # 7) 최종 렌더링
+        return render_template(
+            'result.html',
+            image_name=filename,
+            predicted_class=predicted_class,
+            gemini_description=gpt4o_description
+        )
+
     return render_template('img_upload.html')
 # # ---------------------------------------------------------
 
