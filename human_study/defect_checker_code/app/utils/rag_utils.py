@@ -1,13 +1,11 @@
 # 📁 app/utils/rag_utils.py
+
 import os
 import pickle
 import re
 import warnings
+import threading
 from dotenv import load_dotenv
-from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain.schema import Document
-import google.generativeai as genai
 from .gemini_utils import ask_gemini
 
 # suppress TensorFlow and other logs
@@ -16,43 +14,52 @@ os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '2')
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
 
-# 1. ENV 로드 and genai configure at module load
+# 1. ENV 로드 (genai.configure는 get_llm() 내부로 이동)
 load_dotenv()
-genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
 
 # 2. 전역 캐시 변수 선언
-VECTORSTORE_PATH = os.path.join(os.path.dirname(__file__), 'faiss_db', 'vectorstore.pkl')
+VECTORSTORE_PATH = os.path.join(
+    os.path.dirname(__file__),
+    'faiss_db',
+    'vectorstore.pkl'
+)
 _vectorstore = None
 _llm = None
-_embedding_model = None
 conversation_history = []
 
-# 3. Lazy 초기화 함수
-
-def get_vectorstore():
+# 3. Vectorstore 비동기 로드 (백그라운드)
+def _load_vectorstore_background():
     global _vectorstore
-    if _vectorstore is None and os.path.exists(VECTORSTORE_PATH):
+    try:
+        # pickle.load 시 FAISS 모듈은 백그라운드 스레드에서 import 되어도 무방합니다
         with open(VECTORSTORE_PATH, 'rb') as f:
             _vectorstore = pickle.load(f)
+    except Exception:
+        _vectorstore = None
+
+threading.Thread(
+    target=_load_vectorstore_background,
+    daemon=True
+).start()
+
+# 4. Lazy 반환 함수
+def get_vectorstore():
+    # 백그라운드 로드가 완료된 _vectorstore 객체를 반환
     return _vectorstore
-
-
-def get_embedding_model():
-    global _embedding_model
-    if _embedding_model is None:
-        _embedding_model = HuggingFaceEmbeddings(model_name='jhgan/ko-sbert-nli')
-    return _embedding_model
 
 
 def get_llm():
     global _llm
     if _llm is None:
-        # genai already configured at import, just instantiate
-        _llm = genai.GenerativeModel('gemini-2.0-flash')
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+            _llm = genai.GenerativeModel('gemini-2.0-flash')
+        except Exception:
+            _llm = None
     return _llm
 
-# 4. 응답 정리 함수 (unchanged)
-
+# 5. 응답 정리 함수 (unchanged)
 def format_answer(answer: str) -> str:
     answer = re.sub(r"(안녕하세요[.!]?\s*궁금한 내용을 물어보세요!?)", "", answer).strip()
     answer = re.sub(r"\*\*(.*?)\*\*", r"\1", answer)
@@ -63,22 +70,24 @@ def format_answer(answer: str) -> str:
     answer = re.sub(r"^AI:\s*", "", answer)
     return answer.strip()
 
-# 5. 메인 RAG 함수 (lazy init 적용)
-
+# 6. 메인 RAG 함수 (prompt 로직 수정 없이 지연 로드만 적용)
 def answer_with_rag(query: str, top_k: int = 3) -> str:
     global conversation_history
 
     vectorstore = get_vectorstore()
+    print("vectorstore loaded:", bool(vectorstore))
     if not vectorstore:
         return ask_gemini(query)
 
-    docs: list[Document] = vectorstore.similarity_search(query, k=top_k)
+    docs = vectorstore.similarity_search(query, k=top_k)
+    print("docs count:", len(docs))
     if not docs or all(len(doc.page_content.strip()) < 30 for doc in docs):
         return ask_gemini(query)
 
     context = '\n\n'.join(doc.page_content for doc in docs)
     history_text = ''.join(
-        f"[대화{i+1}]\n사용자: {q}\nAI: {a}\n" for i, (q, a) in enumerate(conversation_history[-6:])
+        f"[대화{i+1}]\n사용자: {q}\nAI: {a}\n"
+        for i, (q, a) in enumerate(conversation_history[-6:])
     )
 
     prompt = f"""

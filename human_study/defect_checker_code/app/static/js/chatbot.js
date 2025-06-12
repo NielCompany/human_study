@@ -98,6 +98,7 @@ function dragElement(elmnt, handle) {
       localStorage.setItem("chat_log", chatLog.innerHTML);
     } catch (error) {
       chatLog.innerHTML += `<div class="chat bot">오류가 발생했습니다.</div>`;
+      console.log('error',error)
     }
   }
   
