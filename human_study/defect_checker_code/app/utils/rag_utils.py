@@ -7,6 +7,7 @@ import warnings
 import threading
 from dotenv import load_dotenv
 from .gemini_utils import ask_gemini
+import google.generativeai as genai
 
 # suppress TensorFlow and other logs
 os.environ.setdefault('TF_ENABLE_ONEDNN_OPTS', '0')
@@ -14,8 +15,10 @@ os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '2')
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
 
-# 1. ENV 로드 (genai.configure는 get_llm() 내부로 이동)
+# 1. ENV 로드 & Gemini API 키 설정
 load_dotenv()
+
+genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
 
 # 2. 전역 캐시 변수 선언
 VECTORSTORE_PATH = os.path.join(
@@ -31,7 +34,6 @@ conversation_history = []
 def _load_vectorstore_background():
     global _vectorstore
     try:
-        # pickle.load 시 FAISS 모듈은 백그라운드 스레드에서 import 되어도 무방합니다
         with open(VECTORSTORE_PATH, 'rb') as f:
             _vectorstore = pickle.load(f)
     except Exception:
@@ -47,13 +49,11 @@ def get_vectorstore():
     # 백그라운드 로드가 완료된 _vectorstore 객체를 반환
     return _vectorstore
 
-
 def get_llm():
     global _llm
     if _llm is None:
         try:
-            import google.generativeai as genai
-            genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+            # 이미 configure된 genai를 재사용
             _llm = genai.GenerativeModel('gemini-2.0-flash')
         except Exception:
             _llm = None
@@ -80,7 +80,6 @@ def answer_with_rag(query: str, top_k: int = 3) -> str:
         return ask_gemini(query)
 
     docs = vectorstore.similarity_search(query, k=top_k)
-    print("docs count:", len(docs))
     if not docs or all(len(doc.page_content.strip()) < 30 for doc in docs):
         return ask_gemini(query)
 
