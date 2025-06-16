@@ -1,5 +1,5 @@
 # 추후 웹 앱용 진입점 (Flask or Streamlit)
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, make_response
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
 from db import user_util
@@ -340,6 +340,13 @@ def predict():
         if answer.startswith("아니오"):
             predicted_class = "없음"
 
+        # 7) 세션에 결과 저장
+        session['last_image'] = filename
+        session['last_prediction'] = {
+            'category': predicted_class,
+            'description': gpt4o_description
+        }
+
         # 7) 최종 렌더링
         return render_template(
             'result.html',
@@ -350,6 +357,39 @@ def predict():
 
     return render_template('img_upload.html')
 # # ---------------------------------------------------------
+from weasyprint import HTML
+from datetime import datetime
+import os
+
+# PDF 리포트 다운로드 엔드포인트
+@app.route('/report/pdf')
+def download_pdf():
+    # 세션에서 데이터 가져오기
+    result = session.get('last_prediction', {})
+    img_name = session.get('last_image')
+    if not result or not img_name:
+        return "먼저 이미지 예측을 수행해주세요.", 400
+
+    # 외부 접근 가능한 이미지 URL 생성
+    image_url = url_for('static', filename=f'uploads/{img_name}', _external=True)
+
+    # HTML 템플릿 렌더링
+    html_str = render_template(
+        'simple_report.html',
+        now=datetime.now().strftime("%Y-%m-%d %H:%M"),
+        result=result,
+        image_url=image_url
+    )
+
+    # PDF 변환
+    pdf_bytes = HTML(string=html_str).write_pdf()
+
+    # PDF 응답 생성
+    response = make_response(pdf_bytes)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = 'attachment; filename=diagnosis_report.pdf'
+    return response
+
 
 # predict ( Model 이 분류해준 predict 반환 안받고 prompt 짠거 )
 
@@ -434,4 +474,4 @@ def predict():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)

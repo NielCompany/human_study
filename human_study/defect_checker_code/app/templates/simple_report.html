@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>하자 진단 리포트</title>
+  <style>
+    /* WeasyPrint 전용 페이지 설정: A4 세로, 여백 1cm */
+    @page {
+      size: A4 portrait;
+      margin: 1cm;
+    }
+
+    /* 본문 여백은 없애고, 컨테이너 안에서만 패딩 조절 */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Malgun Gothic', sans-serif;
+    }
+    .wrapper {
+      padding: 0.5cm;  /* 전체 컨텐츠 경계 안쪽 여백 */
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 0.5cm;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 20pt;
+    }
+    .header p {
+      margin: 0;
+      font-size: 9pt;
+      color: #666;
+    }
+
+    /* 전체 테두리 + 칸 구성 */
+    .report-container {
+      display: table;
+      width: 100%;
+      border-collapse: collapse;
+      /* 테두리 굵기 조절 */
+      border: 1px solid #444;
+    }
+    .column {
+      display: table-cell;
+      vertical-align: top;
+      /* 양쪽 칸 간격 줄이기 위해 패딩도 살짝 줄임 */
+      padding: 8px;
+      border-right: 1px solid #444;
+    }
+    .column:last-child {
+      border-right: none;
+    }
+
+    /* 가로 비율: 왼쪽 60% / 오른쪽 40% */
+    .image-section {
+      width: 60%;
+    }
+    .info-section {
+      width: 40%;
+      font-size: 11pt;
+      line-height: 1.4;
+    }
+    .info-section .label {
+      font-weight: bold;
+    }
+    .info-section .description {
+      margin-top: 0.3cm;
+    }
+
+    .column img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+      border: 1px solid #ddd;
+    }
+
+    .footer {
+      position: fixed;
+      bottom: 0.5cm;
+      width: 100%;
+      text-align: center;
+      font-size: 7pt;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <h1>AI 하자 점검 리포트</h1>
+      <p>{{ now }}</p>
+    </div>
+
+    <div class="report-container">
+      <!-- 왼쪽 칸: 이미지 (60%) -->
+      <div class="column image-section">
+        <img src="{{ image_url }}" alt="점검 이미지">
+      </div>
+
+      <!-- 오른쪽 칸: 대분류 + 설명 (40%) -->
+      <div class="column info-section">
+        <p><span class="label">대분류:</span> {{ result.category }}</p>
+        <div class="description">
+          <p><span class="label">하자 설명:</span></p>
+          <p>{{ result.description | replace('\n','<br>') | safe }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    © 2025 AI Defect Checker — www.aidefectchecker.com
+  </div>
+</body>
+</html>

@@ -99,6 +99,31 @@
     color: #388e3c;
   }
 
+  /* PDF 버튼을 Copy 버튼과 동일한 너비·패딩·모양으로 맞추기 */
+.download-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  /* copy-btn과 동일한 패딩/폰트 크기 */
+  padding: 0.5rem 1.2rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #fff;
+  background: linear-gradient(135deg, #2196F3, #42A5F5);
+  border: none;
+  border-radius: 6px;        /* copy-btn과 같은 radius */
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+  width: 100%;               /* flex 아이템으로 꽉 채우기 */
+}
+
+.download-btn:hover {
+  background: linear-gradient(135deg, #1E88E5, #2196F3);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
 
   /* ✅ 버튼을 바깥쪽에 따로 배치 */
   .back-wrapper {

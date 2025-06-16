@@ -30,30 +30,24 @@ _vectorstore = None
 _llm = None
 conversation_history = []
 
-# 3. Vectorstore 비동기 로드 (백그라운드)
-def _load_vectorstore_background():
-    global _vectorstore
-    try:
-        with open(VECTORSTORE_PATH, 'rb') as f:
-            _vectorstore = pickle.load(f)
-    except Exception:
-        _vectorstore = None
-
-threading.Thread(
-    target=_load_vectorstore_background,
-    daemon=True
-).start()
-
-# 4. Lazy 반환 함수
+# 3. Vectorstore 동기 로드 
 def get_vectorstore():
-    # 백그라운드 로드가 완료된 _vectorstore 객체를 반환
+    """필요 시점에 단 한 번만 pickle 로드"""
+    global _vectorstore
+    if _vectorstore is None:
+        try:
+            with open(VECTORSTORE_PATH, 'rb') as f:
+                _vectorstore = pickle.load(f)
+                print("✅ vectorstore 동기 로드 성공")
+        except Exception as e:
+            print("❌ vectorstore 로드 실패:", e)
+            _vectorstore = None
     return _vectorstore
 
 def get_llm():
     global _llm
     if _llm is None:
         try:
-            # 이미 configure된 genai를 재사용
             _llm = genai.GenerativeModel('gemini-2.0-flash')
         except Exception:
             _llm = None

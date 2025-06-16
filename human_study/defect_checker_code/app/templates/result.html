@@ -32,7 +32,11 @@
       </div>
       {% endif %}
 
-      <button class="copy-btn" onclick="copyGeminiText()">📋 Copy</button>
+      <button class="copy-btn" onclick="copyGeminiText()">📇 Copy</button>
+      <!-- PDF 리포트 다운로드 버튼 -->
+      <a href="{{ url_for('download_pdf') }}">
+        <button class="download-btn">📄 Downwload PDF</button>
+      </a>
     </div>
   </div>
 
