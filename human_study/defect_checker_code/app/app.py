@@ -361,6 +361,16 @@ from weasyprint import HTML
 from datetime import datetime
 import os
 
+
+# ! 
+# GTK 런타임 설치 (간단 버전)
+# GTK for Windows Runtime Installer에서 최신 “gtk3-runtime” 설치
+# Url : https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases 
+# 설치 경로(예: C:\Program Files\GTK3-Runtime Win64\bin)를 환경 변수 PATH에 추가
+# 가상환경 재시작 후 pip install weasyprint
+# 설치가 정상 완료되면, import weasyprint 시 더 이상 OSError가 발생하지 않습니다.
+
+
 # PDF 리포트 다운로드 엔드포인트
 @app.route('/report/pdf')
 def download_pdf():
