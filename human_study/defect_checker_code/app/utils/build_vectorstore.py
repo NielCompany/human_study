@@ -1,4 +1,4 @@
-# # app/utils/build_vectorstore.py
+# app/utils/build_vectorstore.py
 
 # import os
 # import pickle
