@@ -479,7 +479,7 @@ from datetime import datetime
 
 # 환경변수 로드 및 검증
 load_dotenv()
-CLOVA_API_KEY = os.getenv("CLOBA_API_KEY")
+CLOVA_API_KEY = os.getenv("CLOVA_API_KEY")
 API_URL = os.getenv("CLOVA_API_URL")
 if not CLOVA_API_KEY or not API_URL:
     raise RuntimeError("환경 변수 오류: CLOVA_API_URL과 CLOBA_API_KEY를 .env 파일에 정확히 설정해주세요.")
