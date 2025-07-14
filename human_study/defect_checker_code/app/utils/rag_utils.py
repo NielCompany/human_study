@@ -17,7 +17,6 @@ warnings.filterwarnings('ignore', category=FutureWarning)
 
 # 1. ENV 로드 & Gemini API 키 설정
 load_dotenv()
-
 genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
 
 # 2. 전역 캐시 변수 선언
@@ -44,14 +43,30 @@ def get_vectorstore():
             _vectorstore = None
     return _vectorstore
 
+# 4. LLM 세션 로드
 def get_llm():
     global _llm
     if _llm is None:
         try:
             _llm = genai.GenerativeModel('gemini-2.0-flash')
-        except Exception:
+            print("✅ LLM 세션 로드 성공")
+        except Exception as e:
+            print("❌ LLM 초기화 실패:", e)
             _llm = None
     return _llm
+
+# 1️⃣ 서버 시작 시 미리 로드하기 위한 warmup
+def _warmup():
+    """백그라운드에서 Vectorstore와 LLM을 미리 로드합니다."""
+    try:
+        _ = get_vectorstore()
+        _ = get_llm()
+        print("✅ Warmup complete: vectorstore & LLM ready")
+    except Exception as e:
+        print("❌ Warmup failed:", e)
+
+# 데몬 스레드로 앱 시작과 동시에 warmup 실행
+threading.Thread(target=_warmup, daemon=True).start()
 
 # 5. 응답 정리 함수 (unchanged)
 def format_answer(answer: str) -> str:
@@ -64,7 +79,7 @@ def format_answer(answer: str) -> str:
     answer = re.sub(r"^AI:\s*", "", answer)
     return answer.strip()
 
-# 6. 메인 RAG 함수 (prompt 로직 수정 없이 지연 로드만 적용)
+# 6. 메인 RAG 함수 (unchanged)
 def answer_with_rag(query: str, top_k: int = 3) -> str:
     global conversation_history
 

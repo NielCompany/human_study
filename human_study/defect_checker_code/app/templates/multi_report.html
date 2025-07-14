@@ -2,20 +2,20 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>하자 진단 리포트</title>
+  <title>하자 점검 리포트</title>
   <style>
-    /* WeasyPrint 전용 페이지 설정: A4 세로, 여백 1cm */
+    /* A4 세로, 여백 1cm */
     @page {
       size: A4 portrait;
       margin: 1cm;
     }
 
-    /* 본문 여백은 없애고, 컨테이너 안에서만 패딩 조절 */
     body {
       margin: 0;
       padding: 0;
       font-family: 'Malgun Gothic', sans-serif;
     }
+
     .wrapper {
       padding: 0.5cm;  /* 전체 컨텐츠 경계 안쪽 여백 */
     }
@@ -34,29 +34,21 @@
       color: #666;
     }
 
-    /* 전체 테두리 + 칸 구성 */
+    /* 카드 하나를 테이블 형태로, 분할 방지 */
     .report-container {
       display: table;
       width: 100%;
       border-collapse: collapse;
-      /* 테두리 굵기 조절 */
       border: 1px solid #444;
+      margin-bottom: 0.5cm;
 
+      /* 내부에서 페이지 나누지 않기 */
       page-break-inside: avoid;
-      break-inside: avoid;
     }
-    
-    .row {
-    display: table-row;
-    page-break-inside: avoid;
-    break-inside: avoid;
-    /* 필요하면 아래로 여백 추가 */
-    /* margin-bottom: 0.5cm; */
-    }
+
     .column {
       display: table-cell;
       vertical-align: top;
-      /* 양쪽 칸 간격 줄이기 위해 패딩도 살짝 줄임 */
       padding: 8px;
       border-right: 1px solid #444;
     }
@@ -64,15 +56,16 @@
       border-right: none;
     }
 
-    /* 가로 비율: 왼쪽 60% / 오른쪽 40% */
+    /* 비율 조정 */
     .image-section {
       width: 60%;
     }
     .info-section {
-      width: 40%;
+      width: 25%;
       font-size: 11pt;
       line-height: 1.4;
     }
+
     .info-section .label {
       font-weight: bold;
     }
@@ -81,45 +74,52 @@
     }
 
     .column img {
-      max-width: 100%;
+      max-width: 70%;
       height: auto;
       display: block;
       margin: 0 auto;
       border: 1px solid #ddd;
     }
 
+    /* Footer는 흐름대로 밑에 붙이기 */
     .footer {
-      position: fixed;
-      right: 0.2cm;
-      bottom: 0.2cm;
-      width: 100%;
-      text-align: right;
-      font-size: 11pt;
+      text-align: center;
+      font-size: 7pt;
       color: #aaa;
+      margin-top: 1cm;
     }
   </style>
 </head>
 <body>
   <div class="wrapper">
+    <!-- 제목과 타임스탬프 -->
     <div class="header">
       <h1>AI 하자 점검 리포트</h1>
       <p>{{ now }}</p>
     </div>
-    {% for item in results %}
-        <div class="report-container">
-            <div class="row">
-                <!-- 왼쪽 칸: 이미지 (60%) -->
-                <div class="column image-section">
-                    <img src="{{ item.image_url }}" alt="점검 이미지">
-                </div>
-                <div class="column info-section">
-                    {% for key, val in item.pairs %}
-                        <p><span class="label"></span>{{ key }} : {{ val }}</p>
-                    {% endfor %}
-                </div>
-            </div>
+
+    <!-- items 리스트를 순회하며 카드마다 테이블 생성 -->
+    {% for it in items %}
+      <div class="report-container">
+        <!-- 왼쪽 칸: 이미지 -->
+        <div class="column image-section">
+          <img src="{{ it.image_url }}" alt="점검 이미지">
         </div>
+        <!-- 오른쪽 칸: 대분류 + 설명 -->
+        <div class="column info-section">
+          <p><span class="label">대분류:</span> {{ it.category }}</p>
+          <div class="description">
+            <p><span class="label">하자 설명:</span></p>
+            <p>{{ it.description | replace('\n','<br>') | safe }}</p>
+          </div>
+        </div>
+      </div>
     {% endfor %}
+
+    <!-- 페이지 마지막에 푸터 -->
+    <div class="footer">
+      © 2025 AI Defect Checker — www.aidefectchecker.com
+    </div>
   </div>
 </body>
 </html>

@@ -6,6 +6,7 @@
     <a href="/">HOME</a>
     <a href="{{ url_for('about') }}">ABOUT US</a>
     <a href="{{ url_for('board_list') }}">INQUIRY</a>
+    <a href="{{ url_for('ocr_upload') }}">OCR TEXT</a>
     {% if session.get('loginuser') %}
     <!-- 로그아웃 시 쿼리 파라미터 전달 -->
     <a href="{{ url_for('logout') }}?cleared=true">LOGOUT</a>
