@@ -41,6 +41,7 @@ def explain_by_gpt4o_with_image(image_path: str, prompt: str) -> str:
             max_tokens=500,
             temperature=0.7
         )
+        print(response.choices[0].message.content.strip())
         return response.choices[0].message.content.strip()
     except Exception as e:
         print("[GPT-4o Vision Error]", e)

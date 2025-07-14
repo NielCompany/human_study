@@ -263,142 +263,449 @@ def board_delete(post_id):
 
 # predict----------------------------------------------------------------------------------------
 
+# from werkzeug.utils import secure_filename
+# from src.model.predict import predict_image, get_defect_keywords
+# # from utils.gemini_utils import explain_by_gemini  # Gemini API 호출 함수
+# from utils.gpt4o_utils import explain_by_gpt4o_with_image, client
+# import os
+
+# UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
+# os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+
+# @app.route('/predict', methods=['GET', 'POST'])
+# def predict():
+#     if request.method == 'POST':
+#         file = request.files.get('image')
+#         if not file:
+#             return render_template('img_upload.html', error="이미지를 업로드해주세요.")
+
+#         # 1) 파일 저장
+#         filename = secure_filename(file.filename)
+#         filepath = os.path.join(UPLOAD_FOLDER, filename)
+#         file.save(filepath)
+
+#         # 2) 기본 분류
+#         predicted_class = predict_image(filepath)
+#         keywords = get_defect_keywords(predicted_class)
+
+#         # 3) 원본 프롬프트(상세 지시) 그대로 사용
+#         prompt = f"""
+#         다음은 하자 점검 이미지에 대한 분석 결과입니다.
+
+#         - 분류된 하자 유형: {predicted_class}
+#         - 해당 유형의 세부 하자 항목 후보들: {', '.join(keywords) if keywords else '없음'}
+
+#         **아래 형식을 반드시 그대로 지켜주세요.**  
+#         **첫 번째 줄**(세부 항목)과 **두 번째 줄**(위치) 사이에 반드시 줄바꿈(`\n`)이 들어가야 합니다.
+
+#         예시)
+#         코킹 마감 불량 -
+#         이미지를 봤을 때 코킹 마감 부위에 코킹 마감 불량이 보입니다.  
+#         실리콘 마감이 깔끔하게 처리되지 않고 끊어진 부분이 확인됩니다.
+
+#         위 예시처럼, **실제 이미지에 어떤 하자가 보이는지 구체적으로 추론하여**,
+#         이렇게 `\n`이 들어간다고 생각하시고,
+#         `\n` 문자를 쓰지 마시고, 실제 엔터(줄바꿈)만 사용해 주세요. 
+#         아래 항목을 포함해서 요약해 주세요 (4줄 이내):
+
+#         1. 가장 유사해 보이는 세부 하자 항목 1개 선택 예시)코킹 마감 불량 - 
+#         2. 구체적인 증상 묘사 (이미지 기반 추론처럼)
+
+#         기술 용어는 유지하되, 불필요한 서론 없이 간단히 존댓말로 설명해 주세요.
+#         정확하지 않은 부분에 대해서는 서술하지 않으셔야 합니다.
+#         정확한 내용만 설명해주세요.
+#         띄어쓰기 및 줄바꿈 처리도 깔끔하게 해주세요.
+#         """
+
+#         # 4) 첫 번째 GPT-4o 호출: 상세 설명 생성
+#         gpt4o_description = explain_by_gpt4o_with_image(filepath, prompt)
+
+#         # 5) 두 번째 GPT-4o 호출: yes/no로 하자 유무 확인
+#         confirm = client.chat.completions.create(
+#             model="gpt-4o",
+#             messages=[{
+#                 "role": "user",
+#                 "content": (
+#                     "아래 설명이 실제 하자 설명인가요? 하자가 없으면 '아니오', 있으면 '예'라고만 답해주세요.\n\n"
+#                     f"{gpt4o_description}"
+#                 )
+#             }],
+#             temperature=0
+#         )
+#         answer = confirm.choices[0].message.content.strip()
+
+#         # 6) '아니오'면 predicted_class만 '없음'으로 변경
+#         if answer.startswith("아니오"):
+#             predicted_class = "없음"
+
+#         # 7) 세션에 결과 저장
+#         session['last_image'] = filename
+#         session['last_prediction'] = {
+#             'category': predicted_class,
+#             'description': gpt4o_description
+#         }
+
+#         # 7) 최종 렌더링
+#         return render_template(
+#             'result.html',
+#             image_name=filename,
+#             predicted_class=predicted_class,
+#             gemini_description=gpt4o_description
+#         )
+
+#     return render_template('img_upload.html')
+
+#-------------------------------------------multi_predict 
 from werkzeug.utils import secure_filename
 from src.model.predict import predict_image, get_defect_keywords
-# from utils.gemini_utils import explain_by_gemini  # Gemini API 호출 함수
 from utils.gpt4o_utils import explain_by_gpt4o_with_image, client
 import os
 
-UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+from pathlib import Path
+from datetime import datetime
+
+# UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
+# os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# UPLOAD_FOLDER를 Path 객체로
+UPLOAD_FOLDER = Path(app.root_path) / "static" / "uploads"
+UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 
 
 
 @app.route('/predict', methods=['GET', 'POST'])
 def predict():
     if request.method == 'POST':
-        file = request.files.get('image')
-        if not file:
-            return render_template('img_upload.html', error="이미지를 업로드해주세요.")
+        files = request.files.getlist('images')
+        print("files",files)
+        if not files or files[0].filename == '':
+            return render_template('multi_img_upload.html', error="이미지를 업로드해주세요.")
 
-        # 1) 파일 저장
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
-        file.save(filepath)
+        results = []
+        print("DEBUG: 업로드된 파일 개수 =", len(files))
 
-        # 2) 기본 분류
-        predicted_class = predict_image(filepath)
-        keywords = get_defect_keywords(predicted_class)
+        for idx, file in enumerate(files, start=1):
+            filename = secure_filename(file.filename)
+           # filepath = os.path.join(UPLOAD_FOLDER, filename)
+            filepath: Path = UPLOAD_FOLDER / filename
+            file.save(filepath)
+            print(f"DEBUG [{idx}] saved file →", filename)
 
-        # 3) 원본 프롬프트(상세 지시) 그대로 사용
-        prompt = f"""
-        다음은 하자 점검 이미지에 대한 분석 결과입니다.
+            # 2) 기본 분류
+            predicted_class = predict_image(filepath)
+            keywords = get_defect_keywords(predicted_class)
+            print(f"DEBUG [{idx}] predicted_class =", predicted_class)
+            print(f"DEBUG [{idx}] keywords =", keywords)
 
-        - 분류된 하자 유형: {predicted_class}
-        - 해당 유형의 세부 하자 항목 후보들: {', '.join(keywords) if keywords else '없음'}
+            # 3) GPT-4o 호출
+            prompt = f"""
+            다음은 하자 점검 이미지에 대한 분석 결과입니다.
 
-        **아래 형식을 반드시 그대로 지켜주세요.**  
-        **첫 번째 줄**(세부 항목)과 **두 번째 줄**(위치) 사이에 반드시 줄바꿈(`\n`)이 들어가야 합니다.
+            - 분류된 하자 유형: {predicted_class}
+            - 해당 유형의 세부 하자 항목 후보들: {', '.join(keywords) if keywords else '없음'}
 
-        예시)
-        코킹 마감 불량 -
-        이미지를 봤을 때 코킹 마감 부위에 코킹 마감 불량이 보입니다.  
-        실리콘 마감이 깔끔하게 처리되지 않고 끊어진 부분이 확인됩니다.
+            **아래 형식을 반드시 그대로 지켜주세요.**  
+            **첫 번째 줄**(세부 항목)과 **두 번째 줄**(위치) 사이에 반드시 줄바꿈(`\n`)이 들어가야 합니다.
 
-        위 예시처럼, **실제 이미지에 어떤 하자가 보이는지 구체적으로 추론하여**,
-        이렇게 `\n`이 들어간다고 생각하시고,
-        `\n` 문자를 쓰지 마시고, 실제 엔터(줄바꿈)만 사용해 주세요. 
-        아래 항목을 포함해서 요약해 주세요 (4줄 이내):
+            예시)
+            코킹 마감 불량 -
+            이미지를 봤을 때 코킹 마감 부위에 코킹 마감 불량이 보입니다.  
+            실리콘 마감이 깔끔하게 처리되지 않고 끊어진 부분이 확인됩니다.
 
-        1. 가장 유사해 보이는 세부 하자 항목 1개 선택 예시)코킹 마감 불량 - 
-        2. 구체적인 증상 묘사 (이미지 기반 추론처럼)
+            위 예시처럼, **실제 이미지에 어떤 하자가 보이는지 구체적으로 추론하여**,
+            이렇게 `\n`이 들어간다고 생각하시고,
+            `\n` 문자를 쓰지 마시고, 실제 엔터(줄바꿈)만 사용해 주세요. 
+            아래 항목을 포함해서 요약해 주세요 (4줄 이내):
 
-        기술 용어는 유지하되, 불필요한 서론 없이 간단히 존댓말로 설명해 주세요.
-        정확하지 않은 부분에 대해서는 서술하지 않으셔야 합니다.
-        정확한 내용만 설명해주세요.
-        띄어쓰기 및 줄바꿈 처리도 깔끔하게 해주세요.
-        """
+            1. 가장 유사해 보이는 세부 하자 항목 1개 선택 예시)코킹 마감 불량 - 
+            2. 구체적인 증상 묘사 (이미지 기반 추론처럼)
 
-        # 4) 첫 번째 GPT-4o 호출: 상세 설명 생성
-        gpt4o_description = explain_by_gpt4o_with_image(filepath, prompt)
+            기술 용어는 유지하되, 불필요한 서론 없이 간단히 존댓말로 설명해 주세요.
+            정확하지 않은 부분에 대해서는 서술하지 않으셔야 합니다.
+            정확한 내용만 설명해주세요.
+            띄어쓰기 및 줄바꿈 처리도 깔끔하게 해주세요.
+            """
 
-        # 5) 두 번째 GPT-4o 호출: yes/no로 하자 유무 확인
-        confirm = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{
-                "role": "user",
-                "content": (
-                    "아래 설명이 실제 하자 설명인가요? 하자가 없으면 '아니오', 있으면 '예'라고만 답해주세요.\n\n"
-                    f"{gpt4o_description}"
-                )
-            }],
-            temperature=0
+            gpt4o_description = explain_by_gpt4o_with_image(filepath, prompt)
+            print(f"DEBUG [{idx}] gpt4o_description =", gpt4o_description)
+
+            # 4) yes/no 검증
+            confirm = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[{
+                    "role": "user",
+                    "content": (
+                        "아래 설명이 실제 하자 설명인가요? 하자가 없으면 '아니오', 있으면 '예'라고만 답해주세요.\n\n"
+                        f"{gpt4o_description}"
+                    )
+                }],
+                temperature=0
+            )
+            answer = confirm.choices[0].message.content.strip()
+            print(f"DEBUG [{idx}] answer =", answer)
+            if answer.startswith("아니오"):
+                predicted_class = "없음"
+
+            # 5) 결과 리스트에 추가
+            results.append({
+                'image_name': filename,
+                'predicted_class': predicted_class,
+                'description': gpt4o_description
+            })
+            print(f"DEBUG [{idx}] appended to results")
+
+            session['last_results'] = results
+            session['report_time']  = datetime.now().strftime("%Y-%m-%d %H:%M")
+            
+        # 루프 끝난 뒤에 한 번만 전체 results 출력
+        print("DEBUG: Final results list:", results)
+        
+
+        return render_template('multi_result.html', results=results)
+
+    return render_template('multi_img_upload.html')
+
+##--------------------------------------------------------------
+# OCR_EXTRACT
+# -------------------------------
+from pathlib import Path
+import uuid, time, json, requests
+from dotenv import load_dotenv
+from flask import session, request, redirect, url_for, render_template, make_response, send_file
+from weasyprint import HTML
+from datetime import datetime
+
+# 환경변수 로드 및 검증
+load_dotenv()
+CLOVA_API_KEY = os.getenv("CLOBA_API_KEY")
+API_URL = os.getenv("CLOVA_API_URL")
+if not CLOVA_API_KEY or not API_URL:
+    raise RuntimeError("환경 변수 오류: CLOVA_API_URL과 CLOBA_API_KEY를 .env 파일에 정확히 설정해주세요.")
+
+#  키-값 추출 함수
+def extract_key_value_by_row(fields, row_threshold=15):
+    items = []
+    for f in fields:
+        verts = f['boundingPoly']['vertices']
+        # convert missing coords
+        verts = [{ 'x': v.get('x',0), 'y': v.get('y',0) } for v in verts]
+        top = min(p['y'] for p in verts)
+        left = min(p['x'] for p in verts)
+        items.append({ 'text': f['inferText'].strip(), 'top': top, 'left': left, 'bbox': verts })
+    items.sort(key=lambda x: (x['top'], x['left']))
+    rows, cur = [], []
+    for it in items:
+        if not cur or abs(it['top'] - cur[0]['top']) <= row_threshold:
+            cur.append(it)
+        else:
+            rows.append(cur)
+            cur = [it]
+    if cur: rows.append(cur)
+    pairs = []
+    for row in rows:
+        row = sorted(row, key=lambda x: x['left'])
+        if len(row) >= 2:
+            key = row[0]['text'].replace(' ', '')
+            val = ' '.join(r['text'] for r in row[1:])
+        else:
+            key = row[0]['text'].replace(' ', '')
+            val = ''
+        pairs.append((key, val))
+    return pairs
+
+#  OCR 호출
+def run_ocr(image_path: Path):
+    payload = {
+        'images': [{'format': image_path.suffix[1:], 'name': image_path.name}],
+        'requestId': str(uuid.uuid4()),
+        'version': 'V2',
+        'timestamp': int(time.time()*1000)
+    }
+    files = [('file', open(image_path, 'rb'))]
+    headers = {'X-OCR-SECRET': CLOVA_API_KEY}
+    data = {'message': json.dumps(payload).encode('UTF-8')}
+    resp = requests.post(API_URL, headers=headers, data=data, files=files, timeout=30)
+    resp.raise_for_status()
+    return resp.json()
+
+SESSION_KEY = 'ocr_results'
+
+
+@app.route("/ocr/upload", methods=["GET", "POST"])
+def ocr_upload():
+    # 1) GET: 업로드 폼 보여주기
+    if request.method == "GET":
+        session.pop("ocr_results", None)
+        return render_template("ocr_upload.html")  # 친구분의 upload.html 혹은 ocr_upload.html
+
+    # 2) POST: 파일 처리
+    files = request.files.getlist("photos")  # input name="photos"로 맞춰 주세요
+    out = []
+    for f in files:
+        # 2-1) 파일 저장
+        UPLOAD_FOLDER = Path(app.root_path) / "static" / "uploads"
+        save_path = UPLOAD_FOLDER / f.filename
+        f.save(save_path)
+
+        # 2-2) OCR 호출 & 키-값 정리
+        try:
+            raw = run_ocr(save_path)
+            fields = raw["images"][0]["fields"]
+            pairs = extract_key_value_by_row(fields)
+            # fallback: 콜론 파싱
+            if not pairs:
+                pairs = [
+                    tuple(line.split(":",1))
+                    for line in (x["inferText"] for x in fields)
+                    if ":" in line
+                ]
+        except Exception:
+            pairs = []
+
+        # 2-3) 세션에 담을 구조로 포장
+        out.append({
+            "filename": f.filename,
+            "pairs": pairs,
+            # PDF 템플릿에서 바로 쓸 수 있게 URL까지 추가
+            "image_url": url_for("static",
+                                  filename=f"uploads/{f.filename}",
+                                  _external=True)
+        })
+
+    # 3) 세션에 저장
+    session["ocr_results"] = out
+
+    # 4) 결과 페이지 혹은 PDF 다운로드 페이지로 리다이렉트
+    #    바로 PDF로 보내고 싶으면 url_for('download_ocr_pdf')로 바꾸세요.
+    return redirect(url_for("show_ocr_results"))
+
+@app.route("/ocr/results")
+def show_ocr_results():
+    results = session.get("ocr_results")
+    if not results:
+        return redirect(url_for("ocr_upload"))
+    return render_template("report.html", results=results)
+
+@app.route("/ocr/download_pdf")
+def download_ocr_pdf():
+    results = session.get("ocr_results", [])
+    if not results:
+        return "먼저 OCR 수행 후 시도해주세요.", 400
+
+    html_str = render_template(
+        "simple_report.html",   # 친구분 템플릿
+        now=datetime.now().strftime("%Y-%m-%d %H:%M"),
+        results=results
+    )
+    pdf_bytes = HTML(string=html_str).write_pdf()
+
+    resp = make_response(pdf_bytes)
+    resp.headers["Content-Type"] = "application/pdf"
+    resp.headers["Content-Disposition"] = \
+        "attachment; filename=ocr_report.pdf"
+    return resp
+
+# ----------------결과 word 파일로 저장----------------------
+
+import docx
+from docx import Document
+from docx.shared import Inches
+from io import BytesIO
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+
+@app.route('/report/docx')
+def download_docx():
+    # 세션에서 결과 불러오기
+    results = session.get('ocr_results', [])
+    if not results:
+        return "먼저 이미지 예측을 수행해주세요.", 400
+
+    # Document 객체 생성
+    doc = Document()
+    doc.add_heading('AI 하자 진단 리포트', level=1)
+    doc.add_paragraph(datetime.now().strftime("%Y-%m-%d %H:%M"))
+
+    # 테이블 생성 (헤더 포함, 2열)
+    table = doc.add_table(rows=1, cols=2)
+    table.style = 'Table Grid'  
+    table.allow_autofit = False
+    hdr = table.rows[0].cells
+    hdr[0].text = '이미지'
+    hdr[1].text = '추출 결과'
+
+    # 각 결과마다 새 행 추가
+    for item in results:
+        row_cells = table.add_row().cells
+        # --- 셀 분할 방지 (한/글에 복사해도 행이 잘리지 않도록) ---
+        tr = row_cells[0]._tc.getparent()    # 행( w:tr ) 요소
+        trPr = tr.get_or_add_trPr()          # w:trPr
+        cantSplit = OxmlElement('w:cantSplit')
+        trPr.append(cantSplit)
+
+        # 2) 이미지 넣기
+        paragraph = row_cells[0].paragraphs[0]
+        run = paragraph.add_run()
+        run.add_picture(
+            str(UPLOAD_FOLDER / item['filename']),
+            width=Inches(2)
         )
-        answer = confirm.choices[0].message.content.strip()
 
-        # 6) '아니오'면 predicted_class만 '없음'으로 변경
-        if answer.startswith("아니오"):
-            predicted_class = "없음"
+        # 3) 텍스트 넣고 단락마다 KeepTogether 설정
+        texts = [f"{k} : {v}" for k, v in item['pairs']]
+        for idx, line in enumerate(texts):
+            p = row_cells[1].add_paragraph(line)
+            p.paragraph_format.keep_together = True
+            if idx < len(texts)-1:
+                p.paragraph_format.keep_with_next = True
 
-        # 7) 세션에 결과 저장
-        session['last_image'] = filename
-        session['last_prediction'] = {
-            'category': predicted_class,
-            'description': gpt4o_description
-        }
+    # 메모리 버퍼에 저장
+    buf = BytesIO()
+    doc.save(buf)
+    buf.seek(0)
 
-        # 7) 최종 렌더링
-        return render_template(
-            'result.html',
-            image_name=filename,
-            predicted_class=predicted_class,
-            gemini_description=gpt4o_description
-        )
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name='ocr_report.docx',
+        mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    )
 
-    return render_template('img_upload.html')
+
 # # ---------------------------------------------------------
 from weasyprint import HTML
 from datetime import datetime
 import os
 
-
-# ! 
-# GTK 런타임 설치 (간단 버전)
-# GTK for Windows Runtime Installer에서 최신 “gtk3-runtime” 설치
-# Url : https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases 
-# 설치 경로(예: C:\Program Files\GTK3-Runtime Win64\bin)를 환경 변수 PATH에 추가
-# 가상환경 재시작 후 pip install weasyprint
-# 설치가 정상 완료되면, import weasyprint 시 더 이상 OSError가 발생하지 않습니다.
-
-
-# PDF 리포트 다운로드 엔드포인트
 @app.route('/report/pdf')
 def download_pdf():
-    # 세션에서 데이터 가져오기
-    result = session.get('last_prediction', {})
-    img_name = session.get('last_image')
-    if not result or not img_name:
-        return "먼저 이미지 예측을 수행해주세요.", 400
+    results    = session.get('last_results')
+    report_time= session.get('report_time')
+    if not results:
+        return "먼저 예측을 수행해주세요.", 400
 
-    # 외부 접근 가능한 이미지 URL 생성
-    image_url = url_for('static', filename=f'uploads/{img_name}', _external=True)
+    # 각 이미지에 대한 외부 URL 생성
+    items = []
+    for r in results:
+        items.append({
+            'image_url': url_for('static', filename=f'uploads/{r["image_name"]}', _external=True),
+            'category' : r['predicted_class'],
+            'description': r['description'],
+        })
 
-    # HTML 템플릿 렌더링
     html_str = render_template(
-        'simple_report.html',
-        now=datetime.now().strftime("%Y-%m-%d %H:%M"),
-        result=result,
-        image_url=image_url
+        'multi_report.html',
+        now=report_time,
+        items=items
     )
-
-    # PDF 변환
     pdf_bytes = HTML(string=html_str).write_pdf()
+    resp = make_response(pdf_bytes)
+    resp.headers['Content-Type'] = 'application/pdf'
+    resp.headers['Content-Disposition'] = 'attachment; filename=defect_report.pdf'
+    return resp
 
-    # PDF 응답 생성
-    response = make_response(pdf_bytes)
-    response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = 'attachment; filename=diagnosis_report.pdf'
-    return response
 
 
 # predict ( Model 이 분류해준 predict 반환 안받고 prompt 짠거 )

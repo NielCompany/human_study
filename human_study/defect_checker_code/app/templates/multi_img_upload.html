@@ -1,0 +1,141 @@
+<!-- templates/multi_img_upload.html -->
+{% extends "layout/layout.html" %}
+
+{% block title_block %}
+  <title>AI 하자 점검 - 다중 이미지 업로드</title>
+  <!-- upload.css 먼저 -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/upload.css') }}">
+  <!-- multi_img_upload.css: override 전용 -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/multi_upload.css') }}"> 
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+{% endblock %}
+
+{% block content %}
+<main class="upload-wrapper">
+  <div class="upload-card">
+    <h2>하자 이미지를 업로드 해주세요</h2>
+    <p>AI가 자동으로 분석하고 결과를 생성해드립니다.</p>
+
+    <form method="POST" action="{{ url_for('predict') }}" enctype="multipart/form-data" class="upload-form">
+      <div class="upload-box">
+        <!-- ★ 반드시 class="preview" 추가 -->
+        <div id="preview" class="preview"></div>
+
+        <div class="upload-half" onclick="triggerCamera()">
+          <i class="fas fa-camera fa-2x"></i>
+          <span>사진 촬영</span>
+        </div>
+
+        <div class="upload-half">
+          <label for="imageInput">
+            <i class="fas fa-image fa-2x"></i>
+            <span>파일 업로드</span>
+          </label>
+          <input id="imageInput"
+                 type="file"
+                 name="images"
+                 accept="image/*"
+                 multiple
+                 onchange="previewImages(event)"
+                 required />
+        </div>
+      </div>
+
+      <button type="submit"><i class="fas fa-robot"></i> 예측 시작</button>
+    </form>
+  </div>
+</main>
+
+<!-- <script>
+  function triggerCamera() {
+    const input = document.getElementById("imageInput");
+    input.setAttribute("capture", "environment");
+    input.click();
+  }
+
+  function previewImages(event) {
+    const files = Array.from(event.currentTarget.files);
+    const preview = document.getElementById('preview');
+    console.log("📁 previewImages fired", event.currentTarget.files);
+    preview.innerHTML = '';
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.className = 'preview-item';
+        preview.appendChild(img);
+      };
+      reader.readAsDataURL(file);
+    });
+    document.querySelector('.upload-box').classList.add('has-preview');
+  }
+</script> -->
+
+<script>
+  const input = document.getElementById("imageInput");
+  const preview = document.getElementById("preview");
+  let dt = new DataTransfer();
+
+  // 파일 선택 시 DataTransfer에 담고 미리보기 갱신
+  input.addEventListener("change", () => {
+    dt = new DataTransfer();
+    preview.innerHTML = "";
+
+    Array.from(input.files).forEach((file, idx) => {
+      dt.items.add(file);
+
+      const reader = new FileReader();
+      reader.onload = e => {
+        // 1) preview-item wrapper
+        const item = document.createElement("div");
+        item.className = "preview-item";
+
+        // 2) 썸네일 이미지
+        const img = document.createElement("img");
+        img.src = e.target.result;
+        item.appendChild(img);
+
+        // 3) 삭제 버튼
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "remove-btn";
+        btn.textContent = "×";
+        btn.dataset.index = idx;       // 나중에 인덱스 참조용
+        btn.addEventListener("click", removeFile);
+        item.appendChild(btn);
+
+        preview.appendChild(item);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // input.files 업데이트
+    input.files = dt.files;
+
+    // 업로드 버튼 숨기기 예시
+    document.querySelector(".upload-box").classList.add("has-preview");
+  });
+
+  // 특정 파일 제거
+  function removeFile(e) {
+    const idx = Number(e.currentTarget.dataset.index);
+
+    // 1) DataTransfer에서 해당 파일 제거
+    dt.items.remove(idx);
+    // 2) input.files 업데이트
+    input.files = dt.files;
+
+    // 3) preview 다시 렌더링을 위해 강제 change 이벤트
+    const ev = new Event("change");
+    input.dispatchEvent(ev);
+  }
+
+  function triggerCamera() {
+    const cam = document.getElementById("imageInput");
+    cam.setAttribute("capture", "environment");
+    cam.click();
+  }
+</script>
+
+{% endblock %}

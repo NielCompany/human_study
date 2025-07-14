@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>하자 점검 OCR 업로드</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: 'Noto Sans KR', sans-serif;
+      background: #fff;
+      color: #111;
+      display: flex;
+      flex-direction: column;
+    }
+    .wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .header {
+      background: #111;
+      color: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+    }
+    .logo { font-size: 1.2rem; font-weight: bold; }
+    .nav a {
+      color: #fff;
+      margin-left: 1rem;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 0 1rem;
+      position: relative;
+    }
+    .main h1 { font-size: 2rem; margin-bottom: 1rem; }
+    .main p { color: #555; margin-bottom: 1rem; }
+    .file-input {
+      border: 2px dashed #111;
+      padding: 1rem;
+      width: 100%;
+      max-width: 500px;
+      align-items: center;
+      background: #fafafa;
+      color: #111;
+      cursor: pointer;
+      margin-bottom: 1rem;
+    }
+    .preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      max-width: 800px;
+      margin-bottom: 1.5rem;
+    }
+    .preview-item {
+      position: relative;
+      width: 180px;
+      height: 180px;
+    }
+    .preview-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .preview-item .remove-btn {
+      position: absolute;
+      top: 2px; right: 2px;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 18px; height: 18px;
+      font-size: 12px;
+      line-height: 16px;
+      text-align: center;
+      cursor: pointer;
+    }
+    .cta {
+      background: #000;
+      color: #fff;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .cta:hover {
+      background: #fff;
+      color: #000;
+      border: 1px solid #000;
+    }
+    .footer {
+      background: #eee;
+      padding: 1rem;
+      text-align: center;
+      font-size: 0.9rem;
+      margin-top: auto;
+    }
+    .spinner {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .spinner .dot {
+      width: 12px;
+      height: 12px;
+      background: #111;
+      border-radius: 50%;
+      animation: pulse 1s infinite ease-in-out both;
+    }
+    .spinner .dot:nth-child(2) { animation-delay: 0.2s; }
+    .spinner .dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.6; }
+      50%      { transform: scale(1.6); opacity: 1; }
+    }
+    @media (max-width: 768px) {
+      .header { flex-direction: column; align-items: flex-start; }
+      .nav { margin-top: 0.5rem; display: flex; flex-direction: column; }
+      .nav a { margin: 0.25rem 0; }
+      .main h1 { font-size: 1.5rem; }
+      .cta { width: 100%; max-width: 200px; }
+    }
+    #loadingOverlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(255,255,255,0.8);
+      z-index: 1000;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #loadingOverlay.show { display: flex; }
+    #loadingOverlay img {
+      width: 80px; height: 80px; margin-bottom: 1rem;
+    }
+    #loadingOverlay p {
+      font-size: 1rem; color: #111;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <header class="header">
+      <div class="logo">AI 텍스트 추출</div>
+      <nav class="nav">
+        <a href="/">홈</a>
+        <a href="{{ url_for('login') }}">LOGIN</a>
+      </nav>
+    </header>
+
+    <section class="main">
+      <h1>사진 업로드</h1>
+      <p>하자 진단을 위해 여러 장의 사진을 선택하세요.</p>
+      <div id="loadingOverlay">
+        <div class="spinner">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+        <p>텍스트를 추출 중입니다… 잠시만 기다려 주세요.</p>
+      </div>
+      <div class="preview" id="preview"></div>
+      <form id="uploadForm" method="post" enctype="multipart/form-data">
+        <input 
+          type="file" 
+          id="fileInput"
+          name="photos" 
+          accept="image/*" 
+          multiple 
+          required 
+          class="file-input">
+        <button type="submit" class="cta">사진 업로드 & OCR</button>
+      </form>
+    </section>
+
+    <footer class="footer">
+      © 2025 AI Defect Checker — www.nielcompany.com
+    </footer>
+  </div>
+
+  <script>
+    const form    = document.getElementById('uploadForm');
+    const overlay = document.getElementById('loadingOverlay');
+    form.addEventListener('submit', () => overlay.classList.add('show'));
+
+    const input   = document.getElementById('fileInput');
+    const preview = document.getElementById('preview');
+    let dt        = new DataTransfer();
+
+    // 파일 선택 시 DataTransfer에 담고 미리보기 갱신
+    input.addEventListener('change', () => {
+      dt = new DataTransfer();
+      preview.innerHTML = '';
+      Array.from(input.files).forEach((file, idx) => {
+        dt.items.add(file);
+
+        const reader = new FileReader();
+        reader.onload = e => {
+          const item = document.createElement('div');
+          item.className = 'preview-item';
+
+          const img = document.createElement('img');
+          img.src = e.target.result;
+          item.appendChild(img);
+
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'remove-btn';
+          btn.textContent = '×';
+          btn.dataset.index = idx;
+          btn.addEventListener('click', removeFile);
+          item.appendChild(btn);
+
+          preview.appendChild(item);
+        };
+        reader.readAsDataURL(file);
+      });
+      input.files = dt.files;
+    });
+
+    // 특정 파일 제거
+    function removeFile(e) {
+      const idx = Number(e.currentTarget.dataset.index);
+      dt.items.remove(idx);
+      input.files = dt.files;
+      // 미리보기 다시 렌더
+      const event = new Event('change');
+      input.dispatchEvent(event);
+    }
+  </script>
+</body>
+</html>
