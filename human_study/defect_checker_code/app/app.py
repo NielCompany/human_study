@@ -474,7 +474,7 @@ from pathlib import Path
 import uuid, time, json, requests
 from dotenv import load_dotenv
 from flask import session, request, redirect, url_for, render_template, make_response, send_file
-from weasyprint import HTML
+
 from datetime import datetime
 
 # 환경변수 로드 및 검증
@@ -590,6 +590,7 @@ def show_ocr_results():
 
 @app.route("/ocr/download_pdf")
 def download_ocr_pdf():
+    from weasyprint import HTML
     results = session.get("ocr_results", [])
     if not results:
         return "먼저 OCR 수행 후 시도해주세요.", 400
@@ -675,12 +676,13 @@ def download_docx():
 
 
 # # ---------------------------------------------------------
-from weasyprint import HTML
+
 from datetime import datetime
 import os
 
 @app.route('/report/pdf')
 def download_pdf():
+    from weasyprint import HTML
     results    = session.get('last_results')
     report_time= session.get('report_time')
     if not results:
